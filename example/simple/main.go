@@ -8,14 +8,14 @@ package main
 import (
 	"log"
 
-	"github.com/faelmori/keepgo"
+	keepgo "github.com/faelmori/keepgo/internal"
 )
 
-var logger service.Logger
+var logger keepgo.Logger
 
 type program struct{}
 
-func (p *program) Start(s service.Service) error {
+func (p *program) Start(s keepgo.Service) error {
 	// Start should not block. Do the actual work async.
 	go p.run()
 	return nil
@@ -23,24 +23,24 @@ func (p *program) Start(s service.Service) error {
 func (p *program) run() {
 	// Do work here
 }
-func (p *program) Stop(s service.Service) error {
+func (p *program) Stop(s keepgo.Service) error {
 	// Stop should not block. Return with a few seconds.
 	return nil
 }
 
 func main() {
-	svcConfig := &service.Config{
+	svcConfig := &keepgo.Config{
 		Name:        "GoServiceExampleSimple",
 		DisplayName: "Go Service Example",
-		Description: "This is an example Go service.",
+		Description: "This is an example Go keepgo.",
 	}
 
 	prg := &program{}
-	s, err := service.New(prg, svcConfig)
+	s, err := keepgo.New(prg, svcConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
-	logger, err = s.Logger(nil)
+	logger, err = s.GetLogger(nil)
 	if err != nil {
 		log.Fatal(err)
 	}

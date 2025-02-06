@@ -1,6 +1,3 @@
-//go:build go1.8
-// +build go1.8
-
 package keepgo
 
 import (
@@ -8,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-func (c *Config) execPath() (string, error) {
+func (c *Config) ExecPath() (string, error) {
 	if len(c.Executable) != 0 {
 		return filepath.Abs(c.Executable)
 	}

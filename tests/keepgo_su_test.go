@@ -6,7 +6,7 @@
 //go:build su
 // +build su
 
-package keepgo_test
+package tests
 
 import (
 	"flag"

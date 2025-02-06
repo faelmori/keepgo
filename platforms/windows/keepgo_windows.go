@@ -2,13 +2,12 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package windows
 
 import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -39,6 +38,52 @@ const (
 	errnoServiceDoesNotExist syscall.Errno = 1060
 )
 
+var interactive = false
+
+func init() {
+	ChooseSystem(windowsSystem{})
+} //
+func init() {
+	isService, err := svc.IsWindowsService()
+	if err != nil {
+		panic(err)
+	}
+	interactive = !isService
+} //
+func lowPrivMgr() (*mgr.Mgr, error) {
+	h, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT|windows.SC_MANAGER_ENUMERATE_SERVICE)
+	if err != nil {
+		return nil, err
+	}
+	return &mgr.Mgr{Handle: h}, nil
+}
+func lowPrivSvc(m *mgr.Mgr, name string) (*mgr.Service, error) {
+	h, err := windows.OpenService(
+		m.Handle, syscall.StringToUTF16Ptr(name),
+		windows.SERVICE_QUERY_CONFIG|windows.SERVICE_QUERY_STATUS|windows.SERVICE_START|windows.SERVICE_STOP)
+	if err != nil {
+		return nil, err
+	}
+	return &mgr.Service{Handle: h, Name: name}, nil
+}
+func getStopTimeout() time.Duration {
+	// For default and paths see https://support.microsoft.com/en-us/kb/146092
+	defaultTimeout := time.Millisecond * 20000
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control`, registry.READ)
+	if err != nil {
+		return defaultTimeout
+	}
+	sv, _, err := key.GetStringValue("WaitToKillServiceTimeout")
+	if err != nil {
+		return defaultTimeout
+	}
+	v, err := strconv.Atoi(sv)
+	if err != nil {
+		return defaultTimeout
+	}
+	return time.Millisecond * time.Duration(v)
+}
+
 type windowsService struct {
 	i Interface
 	*Config
@@ -46,13 +91,10 @@ type windowsService struct {
 	errSync      sync.Mutex
 	stopStartErr error
 }
-
-// WindowsLogger allows using windows specific logging methods.
 type WindowsLogger struct {
 	ev   *eventlog.Log
 	errs chan<- error
 }
-
 type windowsSystem struct{}
 
 func (windowsSystem) String() string {
@@ -72,10 +114,6 @@ func (windowsSystem) New(i Interface, c *Config) (Service, error) {
 	return ws, nil
 }
 
-func init() {
-	ChooseSystem(windowsSystem{})
-}
-
 func (l WindowsLogger) send(err error) error {
 	if err == nil {
 		return nil
@@ -85,75 +123,41 @@ func (l WindowsLogger) send(err error) error {
 	}
 	return err
 }
-
-// Error logs an error message.
 func (l WindowsLogger) Error(v ...interface{}) error {
 	return l.send(l.ev.Error(3, fmt.Sprint(v...)))
 }
-
-// Warning logs an warning message.
 func (l WindowsLogger) Warning(v ...interface{}) error {
 	return l.send(l.ev.Warning(2, fmt.Sprint(v...)))
 }
-
-// Info logs an info message.
 func (l WindowsLogger) Info(v ...interface{}) error {
 	return l.send(l.ev.Info(1, fmt.Sprint(v...)))
 }
-
-// Errorf logs an error message.
 func (l WindowsLogger) Errorf(format string, a ...interface{}) error {
 	return l.send(l.ev.Error(3, fmt.Sprintf(format, a...)))
 }
-
-// Warningf logs an warning message.
 func (l WindowsLogger) Warningf(format string, a ...interface{}) error {
 	return l.send(l.ev.Warning(2, fmt.Sprintf(format, a...)))
 }
-
-// Infof logs an info message.
 func (l WindowsLogger) Infof(format string, a ...interface{}) error {
 	return l.send(l.ev.Info(1, fmt.Sprintf(format, a...)))
 }
-
-// NError logs an error message and an event ID.
 func (l WindowsLogger) NError(eventID uint32, v ...interface{}) error {
 	return l.send(l.ev.Error(eventID, fmt.Sprint(v...)))
 }
-
-// NWarning logs an warning message and an event ID.
 func (l WindowsLogger) NWarning(eventID uint32, v ...interface{}) error {
 	return l.send(l.ev.Warning(eventID, fmt.Sprint(v...)))
 }
-
-// NInfo logs an info message and an event ID.
 func (l WindowsLogger) NInfo(eventID uint32, v ...interface{}) error {
 	return l.send(l.ev.Info(eventID, fmt.Sprint(v...)))
 }
-
-// NErrorf logs an error message and an event ID.
 func (l WindowsLogger) NErrorf(eventID uint32, format string, a ...interface{}) error {
 	return l.send(l.ev.Error(eventID, fmt.Sprintf(format, a...)))
 }
-
-// NWarningf logs an warning message and an event ID.
 func (l WindowsLogger) NWarningf(eventID uint32, format string, a ...interface{}) error {
 	return l.send(l.ev.Warning(eventID, fmt.Sprintf(format, a...)))
 }
-
-// NInfof logs an info message and an event ID.
 func (l WindowsLogger) NInfof(eventID uint32, format string, a ...interface{}) error {
 	return l.send(l.ev.Info(eventID, fmt.Sprintf(format, a...)))
-}
-
-var interactive = false
-
-func init() {
-	isService, err := svc.IsWindowsService()
-	if err != nil {
-		panic(err)
-	}
-	interactive = !isService
 }
 
 func (ws *windowsService) String() string {
@@ -162,11 +166,9 @@ func (ws *windowsService) String() string {
 	}
 	return ws.Name
 }
-
 func (ws *windowsService) Platform() string {
 	return version
 }
-
 func (ws *windowsService) setError(err error) {
 	ws.errSync.Lock()
 	defer ws.errSync.Unlock()
@@ -177,7 +179,6 @@ func (ws *windowsService) getError() error {
 	defer ws.errSync.Unlock()
 	return ws.stopStartErr
 }
-
 func (ws *windowsService) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (bool, uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
@@ -222,24 +223,6 @@ loop:
 	return false, 0
 }
 
-func lowPrivMgr() (*mgr.Mgr, error) {
-	h, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT|windows.SC_MANAGER_ENUMERATE_SERVICE)
-	if err != nil {
-		return nil, err
-	}
-	return &mgr.Mgr{Handle: h}, nil
-}
-
-func lowPrivSvc(m *mgr.Mgr, name string) (*mgr.Service, error) {
-	h, err := windows.OpenService(
-		m.Handle, syscall.StringToUTF16Ptr(name),
-		windows.SERVICE_QUERY_CONFIG|windows.SERVICE_QUERY_STATUS|windows.SERVICE_START|windows.SERVICE_STOP)
-	if err != nil {
-		return nil, err
-	}
-	return &mgr.Service{Handle: h, Name: name}, nil
-}
-
 func (ws *windowsService) setEnvironmentVariablesInRegistry() error {
 	if len(ws.EnvVars) == 0 {
 		return nil
@@ -264,7 +247,6 @@ func (ws *windowsService) setEnvironmentVariablesInRegistry() error {
 	}
 	return nil
 }
-
 func (ws *windowsService) Install() error {
 	exepath, err := ws.execPath()
 	if err != nil {
@@ -349,7 +331,6 @@ func (ws *windowsService) Install() error {
 	}
 	return nil
 }
-
 func (ws *windowsService) Uninstall() error {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -371,7 +352,6 @@ func (ws *windowsService) Uninstall() error {
 	}
 	return nil
 }
-
 func (ws *windowsService) Run() error {
 	ws.setError(nil)
 	if !interactive {
@@ -402,7 +382,6 @@ func (ws *windowsService) Run() error {
 
 	return ws.i.Stop(ws)
 }
-
 func (ws *windowsService) Status() (Status, error) {
 	m, err := lowPrivMgr()
 	if err != nil {
@@ -443,7 +422,6 @@ func (ws *windowsService) Status() (Status, error) {
 		return StatusUnknown, fmt.Errorf("unknown status %v", status)
 	}
 }
-
 func (ws *windowsService) Start() error {
 	m, err := lowPrivMgr()
 	if err != nil {
@@ -458,7 +436,6 @@ func (ws *windowsService) Start() error {
 	defer s.Close()
 	return s.Start()
 }
-
 func (ws *windowsService) Stop() error {
 	m, err := lowPrivMgr()
 	if err != nil {
@@ -474,7 +451,6 @@ func (ws *windowsService) Stop() error {
 
 	return ws.stopWait(s)
 }
-
 func (ws *windowsService) Restart() error {
 	m, err := lowPrivMgr()
 	if err != nil {
@@ -495,7 +471,6 @@ func (ws *windowsService) Restart() error {
 
 	return s.Start()
 }
-
 func (ws *windowsService) stopWait(s *mgr.Service) error {
 	// First stop the service. Then wait for the service to
 	// actually stop before starting it.
@@ -524,28 +499,9 @@ func (ws *windowsService) stopWait(s *mgr.Service) error {
 	return nil
 }
 
-// getStopTimeout fetches the time before windows will kill the service.
-func getStopTimeout() time.Duration {
-	// For default and paths see https://support.microsoft.com/en-us/kb/146092
-	defaultTimeout := time.Millisecond * 20000
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control`, registry.READ)
-	if err != nil {
-		return defaultTimeout
-	}
-	sv, _, err := key.GetStringValue("WaitToKillServiceTimeout")
-	if err != nil {
-		return defaultTimeout
-	}
-	v, err := strconv.Atoi(sv)
-	if err != nil {
-		return defaultTimeout
-	}
-	return time.Millisecond * time.Duration(v)
-}
-
-func (ws *windowsService) Logger(errs chan<- error) (Logger, error) {
+func (ws *windowsService) GetLogger(errs chan<- error) (Logger, error) {
 	if interactive {
-		return ConsoleLogger, nil
+		return ConsoleLoggerImpl, nil
 	}
 	return ws.SystemLogger(errs)
 }

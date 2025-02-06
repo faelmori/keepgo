@@ -2,16 +2,17 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package tests
 
 import (
+	keepgo "github.com/faelmori/keepgo/internal"
 	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestPlatformName(t *testing.T) {
-	got := Platform()
+	got := keepgo.Platform()
 	t.Logf("Platform is %v", got)
 	wantPrefix := runtime.GOOS + "-"
 	if !strings.HasPrefix(got, wantPrefix) {

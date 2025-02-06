@@ -2,11 +2,12 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package linux
 
 import (
 	"errors"
 	"fmt"
+	"github.com/faelmori/keepgo/internal"
 	"os"
 	"os/signal"
 	"regexp"
@@ -15,12 +16,12 @@ import (
 	"text/template"
 )
 
-func isUpstart() bool {
+func IsUpstart() bool {
 	if _, err := os.Stat("/sbin/upstart-udev-bridge"); err == nil {
 		return true
 	}
 	if _, err := os.Stat("/sbin/initctl"); err == nil {
-		if _, out, err := runWithOutput("/sbin/initctl", "--version"); err == nil {
+		if _, out, err := runWithOutput("/sbin/initctl", "--Version"); err == nil {
 			if strings.Contains(out, "initctl (upstart") {
 				return true
 			}
@@ -29,14 +30,14 @@ func isUpstart() bool {
 	return false
 }
 
-type upstart struct {
-	i        Interface
+type Upstart struct {
+	i        keepgo.Controller
 	platform string
-	*Config
+	*keepgo.Config
 }
 
-func newUpstartService(i Interface, platform string, c *Config) (Service, error) {
-	s := &upstart{
+func newUpstartService(i keepgo.Controller, platform string, c *keepgo.Config) (keepgo.Service, error) {
+	s := &Upstart{
 		i:        i,
 		platform: platform,
 		Config:   c,
@@ -44,15 +45,13 @@ func newUpstartService(i Interface, platform string, c *Config) (Service, error)
 
 	return s, nil
 }
-
-func (s *upstart) String() string {
+func (s *Upstart) String() string {
 	if len(s.DisplayName) > 0 {
 		return s.DisplayName
 	}
 	return s.Name
 }
-
-func (s *upstart) Platform() string {
+func (s *Upstart) Platform() string {
 	return s.platform
 }
 
@@ -61,62 +60,58 @@ func (s *upstart) Platform() string {
 // Upstart will be replaced by systemd in most cases anyway.
 var errNoUserServiceUpstart = errors.New("User services are not supported on Upstart.")
 
-func (s *upstart) configPath() (cp string, err error) {
-	if s.Option.bool(optionUserService, optionUserServiceDefault) {
+func (s *Upstart) ConfigPath() (cp string, err error) {
+	if s.Option.Bool(keepgo.OptionUserService, keepgo.OptionUserServiceDefault) {
 		err = errNoUserServiceUpstart
 		return
 	}
 	cp = "/etc/init/" + s.Config.Name + ".conf"
 	return
 }
-
-func (s *upstart) hasKillStanza() bool {
+func (s *Upstart) HasKillStanza() bool {
 	defaultValue := true
-	version := s.getUpstartVersion()
+	version := s.GetUpstartVersion()
 	if version == nil {
 		return defaultValue
 	}
 
 	maxVersion := []int{0, 6, 5}
-	if matches, err := versionAtMost(version, maxVersion); err != nil || matches {
+	if matches, err := keepgo.VersionAtMost(version, maxVersion); err != nil || matches {
 		return false
 	}
 
 	return defaultValue
 }
-
-func (s *upstart) hasSetUIDStanza() bool {
+func (s *Upstart) HasSetUIDStanza() bool {
 	defaultValue := true
-	version := s.getUpstartVersion()
+	version := s.GetUpstartVersion()
 	if version == nil {
 		return defaultValue
 	}
 
 	maxVersion := []int{1, 4, 0}
-	if matches, err := versionAtMost(version, maxVersion); err != nil || matches {
+	if matches, err := keepgo.VersionAtMost(version, maxVersion); err != nil || matches {
 		return false
 	}
 
 	return defaultValue
 }
-
-func (s *upstart) getUpstartVersion() []int {
-	_, out, err := runWithOutput("/sbin/initctl", "--version")
+func (s *Upstart) GetUpstartVersion() []int {
+	_, out, err := runWithOutput("/sbin/initctl", "--Version")
 	if err != nil {
 		return nil
 	}
 
-	re := regexp.MustCompile(`initctl \(upstart (\d+.\d+.\d+)\)`)
+	re := regexp.MustCompile(`initctl \(Upstart (\d+.\d+.\d+)\)`)
 	matches := re.FindStringSubmatch(out)
 	if len(matches) != 2 {
 		return nil
 	}
 
-	return parseVersion(matches[1])
+	return keepgo.ParseVersion(matches[1])
 }
-
-func (s *upstart) template() *template.Template {
-	customScript := s.Option.string(optionUpstartScript, "")
+func (s *Upstart) GetTemplate() *template.Template {
+	customScript := s.Option.String(keepgo.OptionUpstartScript, "")
 
 	if customScript != "" {
 		return template.Must(template.New("").Funcs(tf).Parse(customScript))
@@ -124,9 +119,8 @@ func (s *upstart) template() *template.Template {
 		return template.Must(template.New("").Funcs(tf).Parse(upstartScript))
 	}
 }
-
-func (s *upstart) Install() error {
-	confPath, err := s.configPath()
+func (s *Upstart) Install() error {
+	confPath, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -141,13 +135,13 @@ func (s *upstart) Install() error {
 	}
 	defer f.Close()
 
-	path, err := s.execPath()
+	path, err := s.ExecPath()
 	if err != nil {
 		return err
 	}
 
 	var to = &struct {
-		*Config
+		*keepgo.Config
 		Path            string
 		HasKillStanza   bool
 		HasSetUIDStanza bool
@@ -156,17 +150,16 @@ func (s *upstart) Install() error {
 	}{
 		s.Config,
 		path,
-		s.hasKillStanza(),
-		s.hasSetUIDStanza(),
-		s.Option.bool(optionLogOutput, optionLogOutputDefault),
-		s.Option.string(optionLogDirectory, defaultLogDirectory),
+		s.HasKillStanza(),
+		s.HasSetUIDStanza(),
+		s.Option.Bool(keepgo.OptionLogOutput, keepgo.OptionLogOutputDefault),
+		s.Option.String(keepgo.OptionLogDirectory, DefaultLogDirectory),
 	}
 
-	return s.template().Execute(f, to)
+	return s.GetTemplate().Execute(f, to)
 }
-
-func (s *upstart) Uninstall() error {
-	cp, err := s.configPath()
+func (s *Upstart) Uninstall() error {
+	cp, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -175,24 +168,22 @@ func (s *upstart) Uninstall() error {
 	}
 	return nil
 }
-
-func (s *upstart) Logger(errs chan<- error) (Logger, error) {
-	if system.Interactive() {
-		return ConsoleLogger, nil
+func (s *Upstart) GetLogger(errs chan<- error) (keepgo.Logger, error) {
+	if keepgo.Interactive() {
+		return nil, nil
 	}
 	return s.SystemLogger(errs)
 }
-func (s *upstart) SystemLogger(errs chan<- error) (Logger, error) {
+func (s *Upstart) SystemLogger(errs chan<- error) (keepgo.Logger, error) {
 	return newSysLogger(s.Name, errs)
 }
-
-func (s *upstart) Run() (err error) {
+func (s *Upstart) Run() (err error) {
 	err = s.i.Start(s)
 	if err != nil {
 		return err
 	}
 
-	s.Option.funcSingle(optionRunWait, func() {
+	s.Option.FuncSingle(keepgo.OptionRunWait, func() {
 		var sigChan = make(chan os.Signal, 3)
 		signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt)
 		<-sigChan
@@ -200,36 +191,32 @@ func (s *upstart) Run() (err error) {
 
 	return s.i.Stop(s)
 }
-
-func (s *upstart) Status() (Status, error) {
+func (s *Upstart) Status() (keepgo.Status, error) {
 	exitCode, out, err := runWithOutput("initctl", "status", s.Name)
 	if exitCode == 0 && err != nil {
-		return StatusUnknown, err
+		return keepgo.StatusUnknown, err
 	}
 
 	switch {
 	case strings.HasPrefix(out, fmt.Sprintf("%s start/running", s.Name)):
-		return StatusRunning, nil
+		return keepgo.StatusRunning, nil
 	case strings.HasPrefix(out, fmt.Sprintf("%s stop/waiting", s.Name)):
-		return StatusStopped, nil
+		return keepgo.StatusStopped, nil
 	default:
-		return StatusUnknown, ErrNotInstalled
+		return keepgo.StatusUnknown, keepgo.ErrNotInstalled
 	}
 }
-
-func (s *upstart) Start() error {
+func (s *Upstart) Start() error {
 	return run("initctl", "start", s.Name)
 }
-
-func (s *upstart) Stop() error {
+func (s *Upstart) Stop() error {
 	return run("initctl", "stop", s.Name)
 }
-
-func (s *upstart) Restart() error {
+func (s *Upstart) Restart() error {
 	return run("initctl", "restart", s.Name)
 }
 
-// The upstart script should stop with an INT or the Go runtime will terminate
+// The Upstart script should stop with an INT or the Go runtime will terminate
 // the program before the Stop handler can run.
 const upstartScript = `# {{.Description}}
 

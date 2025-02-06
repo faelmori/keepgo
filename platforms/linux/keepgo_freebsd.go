@@ -2,7 +2,7 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package linux
 
 import (
 	"fmt"
@@ -13,13 +13,13 @@ import (
 	"text/template"
 )
 
-const version = "freebsd"
+const Version = "freebsd"
 const configDir = "/usr/local/etc/rc.d"
 
 type freebsdSystem struct{}
 
 func (freebsdSystem) String() string {
-	return version
+	return Version
 }
 func (freebsdSystem) Detect() bool {
 	return true
@@ -50,7 +50,7 @@ func init() {
 	}
 }
 
-func isInteractive() (bool, error) {
+func IsInteractive() (bool, error) {
 	return os.Getenv("IS_DAEMON") != "1", nil
 }
 
@@ -65,11 +65,9 @@ func (s *freebsdService) String() string {
 	}
 	return s.Name
 }
-
 func (s *freebsdService) Platform() string {
-	return version
+	return Version
 }
-
 func (s *freebsdService) template() *template.Template {
 	functions := template.FuncMap{
 		"bool": func(v bool) string {
@@ -88,7 +86,6 @@ func (s *freebsdService) template() *template.Template {
 		return template.Must(template.New("").Funcs(functions).Parse(rcScript))
 	}
 }
-
 func (s *freebsdService) configPath() (cp string, err error) {
 	if oserr := os.MkdirAll(configDir, 0755); oserr != nil {
 		err = oserr
@@ -97,7 +94,6 @@ func (s *freebsdService) configPath() (cp string, err error) {
 	cp = filepath.Join(configDir, s.Config.Name)
 	return
 }
-
 func (s *freebsdService) Install() error {
 	path, err := s.execPath()
 	if err != nil {
@@ -139,7 +135,6 @@ func (s *freebsdService) Install() error {
 
 	return nil
 }
-
 func (s *freebsdService) Uninstall() error {
 	cp, err := s.configPath()
 	if err != nil {
@@ -147,7 +142,6 @@ func (s *freebsdService) Uninstall() error {
 	}
 	return os.Remove(cp)
 }
-
 func (s *freebsdService) Status() (Status, error) {
 	cp, err := s.configPath()
 	if err != nil {
@@ -166,19 +160,15 @@ func (s *freebsdService) Status() (Status, error) {
 	}
 	return StatusRunning, nil
 }
-
 func (s *freebsdService) Start() error {
 	return run("service", s.Name, "start")
 }
-
 func (s *freebsdService) Stop() error {
 	return run("service", s.Name, "stop")
 }
-
 func (s *freebsdService) Restart() error {
 	return run("service", s.Name, "restart")
 }
-
 func (s *freebsdService) Run() error {
 	var err error
 
@@ -195,14 +185,12 @@ func (s *freebsdService) Run() error {
 
 	return s.i.Stop(s)
 }
-
-func (s *freebsdService) Logger(errs chan<- error) (Logger, error) {
+func (s *freebsdService) GetLogger(errs chan<- error) (Logger, error) {
 	if interactive {
-		return ConsoleLogger, nil
+		return ConsoleLoggerImpl, nil
 	}
 	return s.SystemLogger(errs)
 }
-
 func (s *freebsdService) SystemLogger(errs chan<- error) (Logger, error) {
 	return newSysLogger(s.Name, errs)
 }
