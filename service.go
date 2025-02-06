@@ -59,7 +59,7 @@
 //			logger.Error(err)
 //		}
 //	}
-package service // import "github.com/faelmori/keepgo"
+package keepgo // import "github.com/faelmori/keepgo"
 
 import (
 	"errors"

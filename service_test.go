@@ -2,14 +2,12 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package service_test
+package keepgo_test
 
 import (
 	"os"
 	"testing"
 	"time"
-
-	"github.com/faelmori/keepgo"
 )
 
 func TestRunInterrupt(t *testing.T) {

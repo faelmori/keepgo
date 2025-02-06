@@ -6,7 +6,7 @@
 //go:build su
 // +build su
 
-package service_test
+package keepgo_test
 
 import (
 	"flag"
@@ -18,8 +18,6 @@ import (
 	"regexp"
 	"testing"
 	"time"
-
-	"github.com/faelmori/keepgo"
 )
 
 const runAsServiceArg = "RunThisAsService"
