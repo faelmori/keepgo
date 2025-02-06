@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func isOpenRC() bool {
+func IsOpenRC() bool {
 	if _, err := exec.LookPath("openrc-init"); err == nil {
 		return true
 	}
@@ -40,7 +40,7 @@ func isOpenRC() bool {
 }
 
 type Openrc struct {
-	i        Interface
+	i        Controller
 	platform string
 	*Config
 }
@@ -49,7 +49,6 @@ func (s *Openrc) Logger(errs chan<- error) (Logger, error) {
 	//TODO implement me
 	panic("implement me")
 }
-
 func (s *Openrc) String() string {
 	if len(s.DisplayName) > 0 {
 		return s.DisplayName
@@ -68,7 +67,7 @@ func (s *Openrc) template() *template.Template {
 	return template.Must(template.New("").Funcs(tf).Parse(OpenRCScript))
 }
 
-func newOpenRCService(i Interface, platform string, c *Config) (Service, error) {
+func newOpenRCService(i Controller, platform string, c *Config) (Service, error) {
 	s := &Openrc{
 		i:        i,
 		platform: platform,
@@ -79,7 +78,7 @@ func newOpenRCService(i Interface, platform string, c *Config) (Service, error) 
 
 var errNoUserServiceOpenRC = errors.New("user services are not supported on OpenRC")
 
-func (s *Openrc) configPath() (cp string, err error) {
+func (s *Openrc) ConfigPath() (cp string, err error) {
 	if s.Option.Bool(OptionUserService, OptionUserServiceDefault) {
 		err = errNoUserServiceOpenRC
 		return
@@ -88,7 +87,7 @@ func (s *Openrc) configPath() (cp string, err error) {
 	return
 }
 func (s *Openrc) Install() error {
-	confPath, err := s.configPath()
+	confPath, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -128,17 +127,17 @@ func (s *Openrc) Install() error {
 		return err
 	}
 	// run rc-update
-	return s.runAction("add")
+	return s.RunAction("add")
 }
 func (s *Openrc) Uninstall() error {
-	confPath, err := s.configPath()
+	confPath, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
 	if err := os.Remove(confPath); err != nil {
 		return err
 	}
-	return s.runAction("delete")
+	return s.RunAction("delete")
 }
 func (s *Openrc) GetLogger(errs chan<- error) (Logger, error) {
 	if Interactive() {
@@ -154,12 +153,11 @@ func (s *Openrc) Run() (err error) {
 	if err != nil {
 		return err
 	}
-	s.(OptionRunWait, func() {
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-		<-sig
-		err = s.Stop()
-	})
+	s.Option.FuncSingle(OptionRunWait, func() {
+		var sigChan = make(chan os.Signal, 3)
+		signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt)
+		<-sigChan
+	})()
 	return s.i.Stop(s)
 }
 func (s *Openrc) Status() (Status, error) {
@@ -204,7 +202,7 @@ func (s *Openrc) Restart() error {
 	time.Sleep(50 * time.Millisecond)
 	return s.Start()
 }
-func (s *Openrc) runAction(action string) error {
+func (s *Openrc) RunAction(action string) error {
 	return s.run(action, s.Name)
 }
 func (s *Openrc) run(action string, args ...string) error {

@@ -51,7 +51,7 @@ func main() {
 		return
 	}
 
-	logger, err = s.Logger(nil)
+	logger, err = s.GetLogger(nil)
 	if err != nil {
 		log.Fatal(err)
 	}

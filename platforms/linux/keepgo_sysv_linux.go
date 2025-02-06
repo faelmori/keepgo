@@ -17,12 +17,12 @@ import (
 )
 
 type sysv struct {
-	i        Interface
+	i        Controller
 	platform string
 	*Config
 }
 
-func newSystemVService(i Interface, platform string, c *Config) (Service, error) {
+func newSystemVService(i Controller, platform string, c *Config) (Service, error) {
 	s := &sysv{
 		i:        i,
 		platform: platform,
@@ -38,33 +38,30 @@ func (s *sysv) String() string {
 	}
 	return s.Name
 }
-
 func (s *sysv) Platform() string {
 	return s.platform
 }
 
 var errNoUserServiceSystemV = errors.New("User services are not supported on SystemV.")
 
-func (s *sysv) configPath() (cp string, err error) {
-	if s.Option.bool(optionUserService, optionUserServiceDefault) {
+func (s *sysv) ConfigPath() (cp string, err error) {
+	if s.Option.Bool(OptionUserService, OptionUserServiceDefault) {
 		err = errNoUserServiceSystemV
 		return
 	}
 	cp = "/etc/init.d/" + s.Config.Name
 	return
 }
-
-func (s *sysv) template() *template.Template {
-	customScript := s.Option.string(optionSysvScript, "")
+func (s *sysv) GetTemplate() *template.Template {
+	customScript := s.Option.String(OptionSysvScript, "")
 
 	if customScript != "" {
 		return template.Must(template.New("").Funcs(tf).Parse(customScript))
 	}
 	return template.Must(template.New("").Funcs(tf).Parse(sysvScript))
 }
-
 func (s *sysv) Install() error {
-	confPath, err := s.configPath()
+	confPath, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -79,7 +76,7 @@ func (s *sysv) Install() error {
 	}
 	defer f.Close()
 
-	path, err := s.execPath()
+	path, err := s.ExecPath()
 	if err != nil {
 		return err
 	}
@@ -91,10 +88,10 @@ func (s *sysv) Install() error {
 	}{
 		s.Config,
 		path,
-		s.Option.string(optionLogDirectory, DefaultLogDirectory),
+		s.Option.String(OptionLogDirectory, DefaultLogDirectory),
 	}
 
-	err = s.template().Execute(f, to)
+	err = s.GetTemplate().Execute(f, to)
 	if err != nil {
 		return err
 	}
@@ -115,9 +112,8 @@ func (s *sysv) Install() error {
 
 	return nil
 }
-
 func (s *sysv) Uninstall() error {
-	cp, err := s.configPath()
+	cp, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -126,32 +122,29 @@ func (s *sysv) Uninstall() error {
 	}
 	return nil
 }
-
-func (s *sysv) Logger(errs chan<- error) (Logger, error) {
-	if system.Interactive() {
-		return ConsoleLoggerImpl, nil
+func (s *sysv) GetLogger(errs chan<- error) (Logger, error) {
+	if Interactive() {
+		return newSysLogger(s.Name, errs)
 	}
 	return s.SystemLogger(errs)
 }
 func (s *sysv) SystemLogger(errs chan<- error) (Logger, error) {
 	return newSysLogger(s.Name, errs)
 }
-
 func (s *sysv) Run() (err error) {
-	err = s.i.Start(s)
+	err = s.Start()
 	if err != nil {
 		return err
 	}
 
-	s.Option.funcSingle(optionRunWait, func() {
+	s.Option.FuncSingle(OptionRunWait, func() {
 		var sigChan = make(chan os.Signal, 3)
 		signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt)
 		<-sigChan
 	})()
 
-	return s.i.Stop(s)
+	return s.Stop()
 }
-
 func (s *sysv) Status() (Status, error) {
 	_, out, err := runWithOutput("service", s.Name, "status")
 	if err != nil {
@@ -167,15 +160,12 @@ func (s *sysv) Status() (Status, error) {
 		return StatusUnknown, ErrNotInstalled
 	}
 }
-
 func (s *sysv) Start() error {
 	return run("service", s.Name, "start")
 }
-
 func (s *sysv) Stop() error {
 	return run("service", s.Name, "stop")
 }
-
 func (s *sysv) Restart() error {
 	err := s.Stop()
 	if err != nil {

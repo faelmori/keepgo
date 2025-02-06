@@ -19,7 +19,6 @@ import (
 )
 
 const maxPathSize = 32 * 1024
-
 const version = "aix-ssrc"
 
 type aixSystem struct{}
@@ -63,13 +62,13 @@ var interactive = false
 
 func init() {
 	var err error
-	interactive, err = isInteractive()
+	interactive, err = IsInteractiveAix()
 	if err != nil {
 		panic(err)
 	}
 }
 
-func isInteractive() (bool, error) {
+func IsInteractiveAix() (bool, error) {
 	// The parent process of a service process should be srcmstr.
 	return getArgsFromPid(os.Getppid()) != "/usr/sbin/srcmstr", nil
 }
@@ -85,12 +84,10 @@ func (s *aixService) String() string {
 	}
 	return s.Name
 }
-
 func (s *aixService) Platform() string {
 	return version
 }
-
-func (s *aixService) template() *template.Template {
+func (s *aixService) GetTemplate() *template.Template {
 	functions := template.FuncMap{
 		"bool": func(v bool) string {
 			if v {
@@ -108,12 +105,10 @@ func (s *aixService) template() *template.Template {
 		return template.Must(template.New("").Funcs(functions).Parse(svcConfig))
 	}
 }
-
-func (s *aixService) configPath() (cp string, err error) {
+func (s *aixService) ConfigPath() (cp string, err error) {
 	cp = "/etc/rc.d/init.d/" + s.Config.Name
 	return
 }
-
 func (s *aixService) Install() error {
 	// install service
 	path, err := s.execPath()
@@ -172,7 +167,6 @@ func (s *aixService) Install() error {
 
 	return nil
 }
-
 func (s *aixService) Uninstall() error {
 	s.Stop()
 
@@ -187,7 +181,6 @@ func (s *aixService) Uninstall() error {
 	}
 	return os.Remove(confPath)
 }
-
 func (s *aixService) Status() (Status, error) {
 	exitCode, out, err := runWithOutput("lssrc", "-s", s.Name)
 	if exitCode == 0 && err != nil {
@@ -221,7 +214,6 @@ func (s *aixService) Status() (Status, error) {
 
 	return StatusUnknown, ErrNotInstalled
 }
-
 func (s *aixService) Start() error {
 	return run("startsrc", "-s", s.Name)
 }
@@ -236,7 +228,6 @@ func (s *aixService) Restart() error {
 	time.Sleep(50 * time.Millisecond)
 	return s.Start()
 }
-
 func (s *aixService) Run() error {
 	var err error
 
@@ -253,8 +244,7 @@ func (s *aixService) Run() error {
 
 	return s.i.Stop(s)
 }
-
-func (s *aixService) Logger(errs chan<- error) (Logger, error) {
+func (s *aixService) GetLogger(errs chan<- error) (Logger, error) {
 	if interactive {
 		return ConsoleLoggerImpl, nil
 	}

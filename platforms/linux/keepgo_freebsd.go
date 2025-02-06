@@ -50,7 +50,7 @@ func init() {
 	}
 }
 
-func isInteractive() (bool, error) {
+func IsInteractive() (bool, error) {
 	return os.Getenv("IS_DAEMON") != "1", nil
 }
 
@@ -185,7 +185,7 @@ func (s *freebsdService) Run() error {
 
 	return s.i.Stop(s)
 }
-func (s *freebsdService) Logger(errs chan<- error) (Logger, error) {
+func (s *freebsdService) GetLogger(errs chan<- error) (Logger, error) {
 	if interactive {
 		return ConsoleLoggerImpl, nil
 	}

@@ -7,7 +7,6 @@ package tests
 import (
 	"errors"
 	keepgo "github.com/faelmori/keepgo/platforms/linux"
-	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -15,7 +14,7 @@ import (
 // createTestCgroupFiles creates mock files for tests
 func createTestCgroupFiles() (*os.File, *os.File, error) {
 	// docker cgroup setup
-	hDockerGrp, err := ioutil.TempFile("", "*")
+	hDockerGrp, err := os.CreateTemp("", "*")
 	if err != nil {
 		return nil, nil, errors.New("docker tempfile create failed")
 	}
@@ -25,7 +24,7 @@ func createTestCgroupFiles() (*os.File, *os.File, error) {
 	}
 
 	// linux cgroup setup
-	hLinuxGrp, err := ioutil.TempFile("", "*")
+	hLinuxGrp, err := os.CreateTemp("", "*")
 	if err != nil {
 		return nil, nil, errors.New("\"normal\" tempfile  create failed")
 	}
@@ -71,7 +70,7 @@ func Test_isInContainer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := keepgo.isInContainer(tt.args.cgroupPath)
+			got, err := keepgo.IsInContainer(tt.args.cgroupPath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("isInContainer() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -109,21 +108,21 @@ func Test_isInteractive(t *testing.T) {
 	}{
 		{"docker",
 			func() {
-				strStack <- cgroupFile
-				cgroupFile = hDockerGrp.Name()
+				strStack <- keepgo.CgroupFile
+				keepgo.CgroupFile = hDockerGrp.Name()
 			},
 			func() {
-				cgroupFile = <-strStack
+				keepgo.CgroupFile = <-strStack
 			},
 			true, false,
 		},
 		{"linux",
 			func() {
-				strStack <- cgroupFile
-				cgroupFile = hLinuxGrp.Name()
+				strStack <- keepgo.CgroupFile
+				keepgo.CgroupFile = hLinuxGrp.Name()
 			},
 			func() {
-				cgroupFile = <-strStack
+				keepgo.CgroupFile = <-strStack
 			},
 			true, false,
 		},
@@ -131,7 +130,7 @@ func Test_isInteractive(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.before()
-			got, err := isInteractive()
+			got, err := keepgo.IsInteractive()
 			tt.after()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("isInteractive() error = %v, wantErr %v", err, tt.wantErr)

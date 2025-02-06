@@ -164,7 +164,7 @@ func main() {
 	prg.keepgo = s
 
 	errs := make(chan error, 5)
-	logger, err = s.Logger(errs)
+	logger, err = s.GetLogger(errs)
 	if err != nil {
 		log.Fatal(err)
 	}

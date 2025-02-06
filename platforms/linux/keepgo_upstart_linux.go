@@ -7,7 +7,7 @@ package linux
 import (
 	"errors"
 	"fmt"
-	internal "github.com/faelmori/keepgo/internal"
+	"github.com/faelmori/keepgo/internal"
 	"os"
 	"os/signal"
 	"regexp"
@@ -31,12 +31,12 @@ func IsUpstart() bool {
 }
 
 type Upstart struct {
-	i        internal.Controller
+	i        keepgo.Controller
 	platform string
-	*internal.Config
+	*keepgo.Config
 }
 
-func newUpstartService(i internal.Controller, platform string, c *internal.Config) (internal.Service, error) {
+func newUpstartService(i keepgo.Controller, platform string, c *keepgo.Config) (keepgo.Service, error) {
 	s := &Upstart{
 		i:        i,
 		platform: platform,
@@ -60,43 +60,43 @@ func (s *Upstart) Platform() string {
 // Upstart will be replaced by systemd in most cases anyway.
 var errNoUserServiceUpstart = errors.New("User services are not supported on Upstart.")
 
-func (s *Upstart) configPath() (cp string, err error) {
-	if s.Option.Bool(internal.OptionUserService, internal.OptionUserServiceDefault) {
+func (s *Upstart) ConfigPath() (cp string, err error) {
+	if s.Option.Bool(keepgo.OptionUserService, keepgo.OptionUserServiceDefault) {
 		err = errNoUserServiceUpstart
 		return
 	}
 	cp = "/etc/init/" + s.Config.Name + ".conf"
 	return
 }
-func (s *Upstart) hasKillStanza() bool {
+func (s *Upstart) HasKillStanza() bool {
 	defaultValue := true
-	version := s.getUpstartVersion()
+	version := s.GetUpstartVersion()
 	if version == nil {
 		return defaultValue
 	}
 
 	maxVersion := []int{0, 6, 5}
-	if matches, err := VersionAtMost(version, maxVersion); err != nil || matches {
+	if matches, err := keepgo.VersionAtMost(version, maxVersion); err != nil || matches {
 		return false
 	}
 
 	return defaultValue
 }
-func (s *Upstart) hasSetUIDStanza() bool {
+func (s *Upstart) HasSetUIDStanza() bool {
 	defaultValue := true
-	version := s.getUpstartVersion()
+	version := s.GetUpstartVersion()
 	if version == nil {
 		return defaultValue
 	}
 
 	maxVersion := []int{1, 4, 0}
-	if matches, err := VersionAtMost(version, maxVersion); err != nil || matches {
+	if matches, err := keepgo.VersionAtMost(version, maxVersion); err != nil || matches {
 		return false
 	}
 
 	return defaultValue
 }
-func (s *Upstart) getUpstartVersion() []int {
+func (s *Upstart) GetUpstartVersion() []int {
 	_, out, err := runWithOutput("/sbin/initctl", "--Version")
 	if err != nil {
 		return nil
@@ -108,10 +108,10 @@ func (s *Upstart) getUpstartVersion() []int {
 		return nil
 	}
 
-	return internal.ParseVersion(matches[1])
+	return keepgo.ParseVersion(matches[1])
 }
-func (s *Upstart) template() *template.Template {
-	customScript := s.Option.string(optionUpstartScript, "")
+func (s *Upstart) GetTemplate() *template.Template {
+	customScript := s.Option.String(keepgo.OptionUpstartScript, "")
 
 	if customScript != "" {
 		return template.Must(template.New("").Funcs(tf).Parse(customScript))
@@ -120,7 +120,7 @@ func (s *Upstart) template() *template.Template {
 	}
 }
 func (s *Upstart) Install() error {
-	confPath, err := s.configPath()
+	confPath, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (s *Upstart) Install() error {
 	}
 
 	var to = &struct {
-		*Config
+		*keepgo.Config
 		Path            string
 		HasKillStanza   bool
 		HasSetUIDStanza bool
@@ -150,16 +150,16 @@ func (s *Upstart) Install() error {
 	}{
 		s.Config,
 		path,
-		s.hasKillStanza(),
-		s.hasSetUIDStanza(),
-		s.Option.Bool(OptionLogOutput, OptionLogOutputDefault),
-		s.Option.String(OptionLogDirectory, DefaultLogDirectory),
+		s.HasKillStanza(),
+		s.HasSetUIDStanza(),
+		s.Option.Bool(keepgo.OptionLogOutput, keepgo.OptionLogOutputDefault),
+		s.Option.String(keepgo.OptionLogDirectory, DefaultLogDirectory),
 	}
 
-	return s.template().Execute(f, to)
+	return s.GetTemplate().Execute(f, to)
 }
 func (s *Upstart) Uninstall() error {
-	cp, err := s.configPath()
+	cp, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -168,13 +168,13 @@ func (s *Upstart) Uninstall() error {
 	}
 	return nil
 }
-func (s *Upstart) Logger(errs chan<- error) (Logger, error) {
-	if Interactive() {
+func (s *Upstart) GetLogger(errs chan<- error) (keepgo.Logger, error) {
+	if keepgo.Interactive() {
 		return nil, nil
 	}
 	return s.SystemLogger(errs)
 }
-func (s *Upstart) SystemLogger(errs chan<- error) (Logger, error) {
+func (s *Upstart) SystemLogger(errs chan<- error) (keepgo.Logger, error) {
 	return newSysLogger(s.Name, errs)
 }
 func (s *Upstart) Run() (err error) {
@@ -183,7 +183,7 @@ func (s *Upstart) Run() (err error) {
 		return err
 	}
 
-	s.Option.FuncSingle(OptionRunWait, func() {
+	s.Option.FuncSingle(keepgo.OptionRunWait, func() {
 		var sigChan = make(chan os.Signal, 3)
 		signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt)
 		<-sigChan
@@ -191,19 +191,19 @@ func (s *Upstart) Run() (err error) {
 
 	return s.i.Stop(s)
 }
-func (s *Upstart) Status() (Status, error) {
+func (s *Upstart) Status() (keepgo.Status, error) {
 	exitCode, out, err := runWithOutput("initctl", "status", s.Name)
 	if exitCode == 0 && err != nil {
-		return StatusUnknown, err
+		return keepgo.StatusUnknown, err
 	}
 
 	switch {
 	case strings.HasPrefix(out, fmt.Sprintf("%s start/running", s.Name)):
-		return StatusRunning, nil
+		return keepgo.StatusRunning, nil
 	case strings.HasPrefix(out, fmt.Sprintf("%s stop/waiting", s.Name)):
-		return StatusStopped, nil
+		return keepgo.StatusStopped, nil
 	default:
-		return StatusUnknown, ErrNotInstalled
+		return keepgo.StatusUnknown, keepgo.ErrNotInstalled
 	}
 }
 func (s *Upstart) Start() error {

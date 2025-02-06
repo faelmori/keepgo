@@ -50,13 +50,6 @@ func (p *program) Stop(s keepgo.Service) error {
 	return nil
 }
 
-// Service setup.
-//
-//	Define service config.
-//	Create the service.
-//	Setup the logger.
-//	Handle service controls (optional).
-//	Run the service.
 func main() {
 	svcFlag := flag.String("service", "", "Control the system service.")
 	flag.Parse()
@@ -80,7 +73,7 @@ func main() {
 		log.Fatal(err)
 	}
 	errs := make(chan error, 5)
-	logger, err = s.Logger(errs)
+	logger, err = s.GetLogger(errs)
 	if err != nil {
 		log.Fatal(err)
 	}

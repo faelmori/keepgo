@@ -5,6 +5,7 @@
 package tests
 
 import (
+	"github.com/faelmori/keepgo/internal"
 	"os"
 	"testing"
 	"time"
@@ -15,7 +16,7 @@ func TestRunInterrupt(t *testing.T) {
 	sc := &keepgo.Config{
 		Name: "go_service_test",
 	}
-	s, err := service.New(p, sc)
+	s, err := keepgo.New(p, sc)
 	if err != nil {
 		t.Fatalf("New err: %s", err)
 	}
@@ -47,13 +48,13 @@ func TestUserRunInterrupt(t *testing.T) {
 		t.Skipf("env %q is not set to 1", testInstallEnv)
 	}
 	p := &program{}
-	options := make(service.KeyValue)
+	options := make(keepgo.KeyValue)
 	options["UserService"] = true
-	sc := &service.Config{
+	sc := &keepgo.Config{
 		Name:   "go_user_service_test",
 		Option: options,
 	}
-	s, err := service.New(p, sc)
+	s, err := keepgo.New(p, sc)
 	if err != nil {
 		t.Fatalf("New err: %s", err)
 	}
@@ -71,14 +72,14 @@ type program struct {
 	numStopped int
 }
 
-func (p *program) Start(s service.Service) error {
+func (p *program) Start(s keepgo.Service) error {
 	go p.run()
 	return nil
 }
 func (p *program) run() {
 	// Do work here
 }
-func (p *program) Stop(s service.Service) error {
+func (p *program) Stop(s keepgo.Service) error {
 	p.numStopped++
 	return nil
 }

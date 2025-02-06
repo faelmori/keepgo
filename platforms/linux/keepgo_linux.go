@@ -12,13 +12,13 @@ import (
 	"strings"
 )
 
-var cgroupFile = "/proc/1/cgroup"
+var CgroupFile = "/proc/1/cgroup"
 
 type linuxSystemService struct {
 	name        string
 	detect      func() bool
 	interactive func() bool
-	new         func(i Interface, platform string, c *Config) (Service, error)
+	new         func(i Controller, platform string, c *Config) (Service, error)
 }
 
 func (sc linuxSystemService) String() string {
@@ -30,7 +30,7 @@ func (sc linuxSystemService) Detect() bool {
 func (sc linuxSystemService) Interactive() bool {
 	return sc.interactive()
 }
-func (sc linuxSystemService) New(i Interface, c *Config) (Service, error) {
+func (sc linuxSystemService) New(i Controller, c *Config) (Service, error) {
 	return sc.new(i, sc.String(), c)
 }
 
@@ -46,7 +46,7 @@ func init() {
 	},
 		linuxSystemService{
 			name:   "linux-upstart",
-			detect: isUpstart,
+			detect: IsUpstart,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
@@ -55,7 +55,7 @@ func init() {
 		},
 		linuxSystemService{
 			name:   "linux-openrc",
-			detect: isOpenRC,
+			detect: IsOpenRC,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
@@ -96,7 +96,7 @@ func BinaryName(pid int) (string, error) {
 	return data[binStart : binStart+binEnd], nil
 }
 func IsInteractive() (bool, error) {
-	inContainer, err := IsInContainer(cgroupFile)
+	inContainer, err := IsInContainer(CgroupFile)
 	if err != nil {
 		return false, err
 	}

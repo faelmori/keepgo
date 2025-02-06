@@ -55,13 +55,13 @@ var interactive = false
 
 func init() {
 	var err error
-	interactive, err = isInteractive()
+	interactive, err = IsInteractiveDarwin()
 	if err != nil {
 		panic(err)
 	}
 }
 
-func isInteractive() (bool, error) {
+func IsInteractiveDarwin() (bool, error) {
 	// TODO: The PPID of Launchd is 1. The PPid of a service process should match launchd's PID.
 	return os.Getppid() != 1, nil
 }
@@ -82,7 +82,7 @@ func (s *darwinLaunchdService) String() string {
 func (s *darwinLaunchdService) Platform() string {
 	return version
 }
-func (s *darwinLaunchdService) getHomeDir() (string, error) {
+func (s *darwinLaunchdService) GetHomeDir() (string, error) {
 	u, err := user.Current()
 	if err == nil {
 		return u.HomeDir, nil
@@ -95,7 +95,7 @@ func (s *darwinLaunchdService) getHomeDir() (string, error) {
 	}
 	return homeDir, nil
 }
-func (s *darwinLaunchdService) getServiceFilePath() (string, error) {
+func (s *darwinLaunchdService) GetServiceFilePath() (string, error) {
 	if s.userService {
 		homeDir, err := s.getHomeDir()
 		if err != nil {
@@ -105,7 +105,7 @@ func (s *darwinLaunchdService) getServiceFilePath() (string, error) {
 	}
 	return "/Library/LaunchDaemons/" + s.Name + ".plist", nil
 }
-func (s *darwinLaunchdService) logDir() (string, error) {
+func (s *darwinLaunchdService) LogDir() (string, error) {
 	if customDir := s.Option.string(optionLogDirectory, ""); customDir != "" {
 		return customDir, nil
 	}
@@ -114,17 +114,17 @@ func (s *darwinLaunchdService) logDir() (string, error) {
 	}
 	return s.getHomeDir()
 }
-func (s *darwinLaunchdService) getLogPaths() (string, string, error) {
+func (s *darwinLaunchdService) GetLogPaths() (string, string, error) {
 	logDir, err := s.logDir()
 	if err != nil {
 		return "", "", err
 	}
 	return s.getLogPath(logDir, "out"), s.getLogPath(logDir, "err"), nil
 }
-func (s *darwinLaunchdService) getLogPath(logDir, logType string) string {
+func (s *darwinLaunchdService) GetLogPath(logDir, logType string) string {
 	return fmt.Sprintf("%s/%s.%s.log", logDir, s.Name, logType)
 }
-func (s *darwinLaunchdService) template() *template.Template {
+func (s *darwinLaunchdService) GetTemplate() *template.Template {
 	functions := template.FuncMap{
 		"bool": func(v bool) string {
 			if v {
@@ -261,7 +261,7 @@ func (s *darwinLaunchdService) Run() error {
 
 	return s.i.Stop(s)
 }
-func (s *darwinLaunchdService) Logger(errs chan<- error) (Logger, error) {
+func (s *darwinLaunchdService) GetLogger(errs chan<- error) (Logger, error) {
 	if interactive {
 		return ConsoleLoggerImpl, nil
 	}

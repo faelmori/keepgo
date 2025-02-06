@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// VersionAtMost will return true if the provided version is less than or equal to max
 func VersionAtMost(version, max []int) (bool, error) {
 	if comp, err := VersionCompare(version, max); err != nil {
 		return false, err
@@ -15,13 +14,6 @@ func VersionAtMost(version, max []int) (bool, error) {
 	}
 	return true, nil
 }
-
-// VersionCompare take to versions split into integer arrays and attempts to compare them
-// An error will be returned if there is an array length mismatch.
-// Return values are as follows
-// -1 - v1 is less than v2
-// 0  - v1 is equal to v2
-// 1  - v1 is greater than v2
 func VersionCompare(v1, v2 []int) (int, error) {
 	if len(v1) != len(v2) {
 		return 0, errors.New("version length mismatch")
@@ -39,9 +31,6 @@ func VersionCompare(v1, v2 []int) (int, error) {
 	}
 	return 0, nil
 }
-
-// ParseVersion will parse any integer type version separated by periods.
-// This does not fully support semver style versions.
 func ParseVersion(v string) []int {
 	version := make([]int, 3)
 

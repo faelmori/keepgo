@@ -19,8 +19,11 @@ import (
 	"time"
 )
 
+// todo
+var errNoUserServiceRCS = errors.New("User services are not supported on rcS.")
+
 type rcs struct {
-	i        Interface
+	i        Controller
 	platform string
 	*Config
 }
@@ -52,7 +55,7 @@ func isRCS() bool {
 	}
 	return false
 }
-func newRCSService(i Interface, platform string, c *Config) (Service, error) {
+func newRCSService(i Controller, platform string, c *Config) (Service, error) {
 	s := &rcs{
 		i:        i,
 		platform: platform,
@@ -70,11 +73,7 @@ func (s *rcs) String() string {
 func (s *rcs) Platform() string {
 	return s.platform
 }
-
-// todo
-var errNoUserServiceRCS = errors.New("User services are not supported on rcS.")
-
-func (s *rcs) configPath() (cp string, err error) {
+func (s *rcs) ConfigPath() (cp string, err error) {
 	if s.Option.Bool(OptionUserService, OptionUserServiceDefault) {
 		err = errNoUserServiceRCS
 		return
@@ -82,7 +81,7 @@ func (s *rcs) configPath() (cp string, err error) {
 	cp = "/etc/init.d/" + s.Config.Name
 	return
 }
-func (s *rcs) template() *template.Template {
+func (s *rcs) GetTemplate() *template.Template {
 	customScript := s.Option.String(OptionRCSScript, "")
 
 	if customScript != "" {
@@ -91,7 +90,7 @@ func (s *rcs) template() *template.Template {
 	return template.Must(template.New("").Funcs(tf).Parse(rcsScript))
 }
 func (s *rcs) Install() error {
-	confPath, err := s.configPath()
+	confPath, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -121,7 +120,7 @@ func (s *rcs) Install() error {
 		s.Option.String(OptionLogDirectory, DefaultLogDirectory),
 	}
 
-	err = s.template().Execute(f, to)
+	err = s.GetTemplate().Execute(f, to)
 	if err != nil {
 		return err
 	}
@@ -137,7 +136,7 @@ func (s *rcs) Install() error {
 	return nil
 }
 func (s *rcs) Uninstall() error {
-	cp, err := s.configPath()
+	cp, err := s.ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -149,9 +148,9 @@ func (s *rcs) Uninstall() error {
 	}
 	return nil
 }
-func (s *rcs) Logger(errs chan<- error) (Logger, error) {
-	if System.Interactive() {
-		return ConsoleLoggerImpl, nil
+func (s *rcs) GetLogger(errs chan<- error) (Logger, error) {
+	if Interactive() {
+		return newSysLogger(s.Name, errs)
 	}
 	return s.SystemLogger(errs)
 }
@@ -164,7 +163,7 @@ func (s *rcs) Run() (err error) {
 		return err
 	}
 
-	s.Option.funcSingle(optionRunWait, func() {
+	s.Option.FuncSingle(OptionRunWait, func() {
 		var sigChan = make(chan os.Signal, 3)
 		signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt)
 		<-sigChan
