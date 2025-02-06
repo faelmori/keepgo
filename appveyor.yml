@@ -4,7 +4,7 @@ platform:
   - x86
   - x64
 
-clone_folder: c:\gopath\src\github.com\faelmori\service
+clone_folder: c:\gopath\src\github.com\faelmori\keepgo
 
 environment:
   GOPATH: c:\gopath

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-// Package service provides a simple way to create a system service.
+// Package keepgo provides a simple way to create a system service.
 // Currently supports Windows, Linux/(systemd | Upstart | SysV | OpenRC), and OSX/Launchd.
 //
 // Windows controls services by setting up callbacks that is non-trivial. This
