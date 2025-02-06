@@ -1,5 +1,5 @@
-module github.com/kardianos/service
+module github.com/faelmori/service
 
-go 1.12
+go 1.23.6
 
-require golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211
+require golang.org/x/sys v0.30.0
