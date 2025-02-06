@@ -8,7 +8,7 @@ package main
 import (
 	"log"
 
-	"github.com/faelmori/service"
+	"github.com/faelmori/keepgo"
 )
 
 var logger service.Logger

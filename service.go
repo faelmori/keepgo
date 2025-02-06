@@ -18,7 +18,7 @@
 //	import (
 //		"log"
 //
-//		"github.com/faelmori/service"
+//		"github.com/faelmori/keepgo"
 //	)
 //
 //	var logger service.Logger
@@ -59,7 +59,7 @@
 //			logger.Error(err)
 //		}
 //	}
-package service // import "github.com/faelmori/service"
+package service // import "github.com/faelmori/keepgo"
 
 import (
 	"errors"

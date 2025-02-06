@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faelmori/service"
+	"github.com/faelmori/keepgo"
 )
 
 const runAsServiceArg = "RunThisAsService"

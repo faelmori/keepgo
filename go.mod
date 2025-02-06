@@ -1,4 +1,4 @@
-module github.com/faelmori/service
+module github.com/faelmori/keepgo
 
 go 1.23.6
 

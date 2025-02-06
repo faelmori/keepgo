@@ -14,7 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/faelmori/service"
+	"github.com/faelmori/keepgo"
 )
 
 // Config is the runner app config structure.

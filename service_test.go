@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faelmori/service"
+	"github.com/faelmori/keepgo"
 )
 
 func TestRunInterrupt(t *testing.T) {

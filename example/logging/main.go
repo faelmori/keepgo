@@ -10,7 +10,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/faelmori/service"
+	"github.com/faelmori/keepgo"
 )
 
 var logger service.Logger
