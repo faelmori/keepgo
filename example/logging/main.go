@@ -3,27 +3,23 @@
 // license that can be found in the LICENSE file.
 
 // Simple service that only works by printing a log message every few seconds.
-package main
+package logging
 
 import (
 	"flag"
+	keepgo "github.com/faelmori/keepgo/internal"
 	"log"
 	"time"
-
-	"github.com/faelmori/keepgo"
 )
 
-var logger service.Logger
+var logger keepgo.Logger
 
-// Program structures.
-//
-//	Define Start and Stop methods.
 type program struct {
 	exit chan struct{}
 }
 
-func (p *program) Start(s service.Service) error {
-	if service.Interactive() {
+func (p *program) Start(s keepgo.Service) error {
+	if keepgo.Interactive() {
 		logger.Info("Running in terminal.")
 	} else {
 		logger.Info("Running under service manager.")
@@ -35,7 +31,7 @@ func (p *program) Start(s service.Service) error {
 	return nil
 }
 func (p *program) run() error {
-	logger.Infof("I'm running %v.", service.Platform())
+	logger.Infof("I'm running %v.", keepgo.Platform())
 	ticker := time.NewTicker(2 * time.Second)
 	for {
 		select {
@@ -47,7 +43,7 @@ func (p *program) run() error {
 		}
 	}
 }
-func (p *program) Stop(s service.Service) error {
+func (p *program) Stop(s keepgo.Service) error {
 	// Any work in Stop should be quick, usually a few seconds at most.
 	logger.Info("I'm Stopping!")
 	close(p.exit)
@@ -65,13 +61,13 @@ func main() {
 	svcFlag := flag.String("service", "", "Control the system service.")
 	flag.Parse()
 
-	options := make(service.KeyValue)
+	options := make(keepgo.KeyValue)
 	options["Restart"] = "on-success"
 	options["SuccessExitStatus"] = "1 2 8 SIGKILL"
-	svcConfig := &service.Config{
+	svcConfig := &keepgo.Config{
 		Name:        "GoServiceExampleLogging",
 		DisplayName: "Go Service Example for Logging",
-		Description: "This is an example Go service that outputs log messages.",
+		Description: "This is an example Go keepgo that outputs log messages.",
 		Dependencies: []string{
 			"Requires=network.target",
 			"After=network-online.target syslog.target"},
@@ -79,7 +75,7 @@ func main() {
 	}
 
 	prg := &program{}
-	s, err := service.New(prg, svcConfig)
+	s, err := keepgo.New(prg, svcConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -99,9 +95,9 @@ func main() {
 	}()
 
 	if len(*svcFlag) != 0 {
-		err := service.Control(s, *svcFlag)
+		err := keepgo.Control(s, *svcFlag)
 		if err != nil {
-			log.Printf("Valid actions: %q\n", service.ControlAction)
+			log.Printf("Valid actions: %q\n", keepgo.ControlAction)
 			log.Fatal(err)
 		}
 		return

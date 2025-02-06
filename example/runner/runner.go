@@ -14,7 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/faelmori/keepgo"
+	"github.com/faelmori/keepgo/internal"
 )
 
 // Config is the runner app config structure.
@@ -29,18 +29,18 @@ type Config struct {
 	Stderr, Stdout string
 }
 
-var logger service.Logger
+var logger keepgo.Logger
 
 type program struct {
-	exit    chan struct{}
-	service service.Service
+	exit   chan struct{}
+	keepgo keepgo.Service
 
 	*Config
 
 	cmd *exec.Cmd
 }
 
-func (p *program) Start(s service.Service) error {
+func (p *program) Start(s keepgo.Service) error {
 	// Look for exec.
 	// Verify home directory.
 	fullExec, err := exec.LookPath(p.Exec)
@@ -58,10 +58,10 @@ func (p *program) Start(s service.Service) error {
 func (p *program) run() {
 	logger.Info("Starting ", p.DisplayName)
 	defer func() {
-		if service.Interactive() {
-			p.Stop(p.service)
+		if keepgo.Interactive() {
+			p.Stop(p.keepgo)
 		} else {
-			p.service.Stop()
+			p.keepgo.Stop()
 		}
 	}()
 
@@ -91,13 +91,13 @@ func (p *program) run() {
 
 	return
 }
-func (p *program) Stop(s service.Service) error {
+func (p *program) Stop(s keepgo.Service) error {
 	close(p.exit)
 	logger.Info("Stopping ", p.DisplayName)
 	if p.cmd.Process != nil {
 		p.cmd.Process.Kill()
 	}
-	if service.Interactive() {
+	if keepgo.Interactive() {
 		os.Exit(0)
 	}
 	return nil
@@ -134,7 +134,7 @@ func getConfig(path string) (*Config, error) {
 }
 
 func main() {
-	svcFlag := flag.String("service", "", "Control the system service.")
+	svcFlag := flag.String("keepgo", "", "Control the system keepgo.")
 	flag.Parse()
 
 	configPath, err := getConfigPath()
@@ -146,7 +146,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	svcConfig := &service.Config{
+	svcConfig := &keepgo.Config{
 		Name:        config.Name,
 		DisplayName: config.DisplayName,
 		Description: config.Description,
@@ -157,11 +157,11 @@ func main() {
 
 		Config: config,
 	}
-	s, err := service.New(prg, svcConfig)
+	s, err := keepgo.New(prg, svcConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
-	prg.service = s
+	prg.keepgo = s
 
 	errs := make(chan error, 5)
 	logger, err = s.Logger(errs)
@@ -179,9 +179,9 @@ func main() {
 	}()
 
 	if len(*svcFlag) != 0 {
-		err := service.Control(s, *svcFlag)
+		err := keepgo.Control(s, *svcFlag)
 		if err != nil {
-			log.Printf("Valid actions: %q\n", service.ControlAction)
+			log.Printf("Valid actions: %q\n", keepgo.ControlAction)
 			log.Fatal(err)
 		}
 		return

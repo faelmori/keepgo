@@ -2,22 +2,20 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-//go:build linux || darwin || solaris || aix || freebsd
-// +build linux darwin solaris aix freebsd
-
-package keepgo
+package linux
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	. "github.com/faelmori/keepgo/internal"
 	"io"
-	"io/ioutil"
 	"log/syslog"
 	"os/exec"
 	"syscall"
 )
 
-const defaultLogDirectory = "/var/log"
+const DefaultLogDirectory = "/var/log"
 
 func newSysLogger(name string, errs chan<- error) (Logger, error) {
 	w, err := syslog.New(syslog.LOG_INFO, name)
@@ -38,7 +36,6 @@ func (s sysLogger) send(err error) error {
 	}
 	return err
 }
-
 func (s sysLogger) Error(v ...interface{}) error {
 	return s.send(s.Writer.Err(fmt.Sprint(v...)))
 }
@@ -62,11 +59,9 @@ func run(command string, arguments ...string) error {
 	_, _, err := runCommand(command, false, arguments...)
 	return err
 }
-
 func runWithOutput(command string, arguments ...string) (int, string, error) {
 	return runCommand(command, true, arguments...)
 }
-
 func runCommand(command string, readStdout bool, arguments ...string) (int, string, error) {
 	cmd := exec.Command(command, arguments...)
 
@@ -102,14 +97,14 @@ func runCommand(command string, readStdout bool, arguments ...string) (int, stri
 	// Darwin: launchctl can fail with a zero exit status,
 	// so check for emtpy stderr
 	if command == "launchctl" {
-		slurp, _ := ioutil.ReadAll(stderr)
+		slurp, _ := io.ReadAll(stderr)
 		if len(slurp) > 0 && !bytes.HasSuffix(slurp, []byte("Operation now in progress\n")) {
 			return 0, "", fmt.Errorf("%q failed with stderr: %s", command, slurp)
 		}
 	}
 
 	if readStdout {
-		out, err := ioutil.ReadAll(stdout)
+		out, err := io.ReadAll(stdout)
 		if err != nil {
 			return 0, "", fmt.Errorf("%q failed while attempting to read stdout: %v", command, err)
 		} else if len(out) > 0 {
@@ -130,9 +125,9 @@ func runCommand(command string, readStdout bool, arguments ...string) (int, stri
 
 	return 0, output, nil
 }
-
 func isExitError(err error) (int, bool) {
-	if exiterr, ok := err.(*exec.ExitError); ok {
+	var exiterr *exec.ExitError
+	if errors.As(err, &exiterr) {
 		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
 			return status.ExitStatus(), true
 		}

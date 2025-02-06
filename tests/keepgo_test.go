@@ -2,7 +2,7 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo_test
+package tests
 
 import (
 	"os"
@@ -12,7 +12,7 @@ import (
 
 func TestRunInterrupt(t *testing.T) {
 	p := &program{}
-	sc := &service.Config{
+	sc := &keepgo.Config{
 		Name: "go_service_test",
 	}
 	s, err := service.New(p, sc)

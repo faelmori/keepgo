@@ -2,10 +2,7 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-//go:build !su
-// +build !su
-
-package keepgo_test
+package tests
 
 import "testing"
 

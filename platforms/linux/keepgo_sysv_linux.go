@@ -2,11 +2,12 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package linux
 
 import (
 	"errors"
 	"fmt"
+	. "github.com/faelmori/keepgo/internal"
 	"os"
 	"os/signal"
 	"strings"
@@ -90,7 +91,7 @@ func (s *sysv) Install() error {
 	}{
 		s.Config,
 		path,
-		s.Option.string(optionLogDirectory, defaultLogDirectory),
+		s.Option.string(optionLogDirectory, DefaultLogDirectory),
 	}
 
 	err = s.template().Execute(f, to)
@@ -128,7 +129,7 @@ func (s *sysv) Uninstall() error {
 
 func (s *sysv) Logger(errs chan<- error) (Logger, error) {
 	if system.Interactive() {
-		return ConsoleLogger, nil
+		return ConsoleLoggerImpl, nil
 	}
 	return s.SystemLogger(errs)
 }

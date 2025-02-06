@@ -2,12 +2,13 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package linux
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	. "github.com/faelmori/keepgo/internal"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -51,7 +52,6 @@ func isRCS() bool {
 	}
 	return false
 }
-
 func newRCSService(i Interface, platform string, c *Config) (Service, error) {
 	s := &rcs{
 		i:        i,
@@ -61,14 +61,12 @@ func newRCSService(i Interface, platform string, c *Config) (Service, error) {
 
 	return s, nil
 }
-
 func (s *rcs) String() string {
 	if len(s.DisplayName) > 0 {
 		return s.DisplayName
 	}
 	return s.Name
 }
-
 func (s *rcs) Platform() string {
 	return s.platform
 }
@@ -77,23 +75,21 @@ func (s *rcs) Platform() string {
 var errNoUserServiceRCS = errors.New("User services are not supported on rcS.")
 
 func (s *rcs) configPath() (cp string, err error) {
-	if s.Option.bool(optionUserService, optionUserServiceDefault) {
+	if s.Option.Bool(OptionUserService, OptionUserServiceDefault) {
 		err = errNoUserServiceRCS
 		return
 	}
 	cp = "/etc/init.d/" + s.Config.Name
 	return
 }
-
 func (s *rcs) template() *template.Template {
-	customScript := s.Option.string(optionRCSScript, "")
+	customScript := s.Option.String(OptionRCSScript, "")
 
 	if customScript != "" {
 		return template.Must(template.New("").Funcs(tf).Parse(customScript))
 	}
 	return template.Must(template.New("").Funcs(tf).Parse(rcsScript))
 }
-
 func (s *rcs) Install() error {
 	confPath, err := s.configPath()
 	if err != nil {
@@ -110,7 +106,7 @@ func (s *rcs) Install() error {
 	}
 	defer f.Close()
 
-	path, err := s.execPath()
+	path, err := s.ExecPath()
 	if err != nil {
 		return err
 	}
@@ -122,7 +118,7 @@ func (s *rcs) Install() error {
 	}{
 		s.Config,
 		path,
-		s.Option.string(optionLogDirectory, defaultLogDirectory),
+		s.Option.String(OptionLogDirectory, DefaultLogDirectory),
 	}
 
 	err = s.template().Execute(f, to)
@@ -140,7 +136,6 @@ func (s *rcs) Install() error {
 
 	return nil
 }
-
 func (s *rcs) Uninstall() error {
 	cp, err := s.configPath()
 	if err != nil {
@@ -154,17 +149,15 @@ func (s *rcs) Uninstall() error {
 	}
 	return nil
 }
-
 func (s *rcs) Logger(errs chan<- error) (Logger, error) {
-	if system.Interactive() {
-		return ConsoleLogger, nil
+	if System.Interactive() {
+		return ConsoleLoggerImpl, nil
 	}
 	return s.SystemLogger(errs)
 }
 func (s *rcs) SystemLogger(errs chan<- error) (Logger, error) {
 	return newSysLogger(s.Name, errs)
 }
-
 func (s *rcs) Run() (err error) {
 	err = s.i.Start(s)
 	if err != nil {
@@ -179,7 +172,6 @@ func (s *rcs) Run() (err error) {
 
 	return s.i.Stop(s)
 }
-
 func (s *rcs) Status() (Status, error) {
 	_, out, err := runWithOutput("/etc/init.d/"+s.Name, "status")
 	if err != nil {
@@ -195,15 +187,12 @@ func (s *rcs) Status() (Status, error) {
 		return StatusUnknown, ErrNotInstalled
 	}
 }
-
 func (s *rcs) Start() error {
 	return run("/etc/init.d/"+s.Name, "start")
 }
-
 func (s *rcs) Stop() error {
 	return run("/etc/init.d/"+s.Name, "stop")
 }
-
 func (s *rcs) Restart() error {
 	err := s.Stop()
 	if err != nil {

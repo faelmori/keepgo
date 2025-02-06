@@ -1,6 +1,7 @@
-package keepgo
+package tests
 
 import (
+	keepgo "github.com/faelmori/keepgo/internal"
 	"reflect"
 	"testing"
 )
@@ -36,13 +37,13 @@ func Test_versionCompare(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := versionCompare(tt.args.v1, tt.args.v2)
+			got, err := keepgo.VersionCompare(tt.args.v1, tt.args.v2)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("versionCompare() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("VersionCompare() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("versionCompare() = %v, want %v", got, tt.want)
+				t.Errorf("VersionCompare() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -64,8 +65,8 @@ func Test_parseVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := parseVersion(tt.args.v); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseVersion() = %v, want %v", got, tt.want)
+			if got := keepgo.ParseVersion(tt.args.v); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseVersion() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -93,13 +94,13 @@ func Test_versionAtMost(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := versionAtMost(tt.args.version, tt.args.max)
+			got, err := keepgo.VersionAtMost(tt.args.version, tt.args.max)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("versionAtMost() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("VersionAtMost() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("versionAtMost() = %v, want %v", got, tt.want)
+				t.Errorf("VersionAtMost() = %v, want %v", got, tt.want)
 			}
 		})
 	}

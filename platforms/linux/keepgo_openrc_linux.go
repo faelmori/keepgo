@@ -1,9 +1,10 @@
-package keepgo
+package linux
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	. "github.com/faelmori/keepgo/internal"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -38,34 +39,37 @@ func isOpenRC() bool {
 	return false
 }
 
-type openrc struct {
+type Openrc struct {
 	i        Interface
 	platform string
 	*Config
 }
 
-func (s *openrc) String() string {
+func (s *Openrc) Logger(errs chan<- error) (Logger, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *Openrc) String() string {
 	if len(s.DisplayName) > 0 {
 		return s.DisplayName
 	}
 	return s.Name
 }
-
-func (s *openrc) Platform() string {
+func (s *Openrc) Platform() string {
 	return s.platform
 }
-
-func (s *openrc) template() *template.Template {
-	customScript := s.Option.string(optionOpenRCScript, "")
+func (s *Openrc) template() *template.Template {
+	customScript := s.Option.String(OptionOpenRCScript, "")
 
 	if customScript != "" {
 		return template.Must(template.New("").Funcs(tf).Parse(customScript))
 	}
-	return template.Must(template.New("").Funcs(tf).Parse(openRCScript))
+	return template.Must(template.New("").Funcs(tf).Parse(OpenRCScript))
 }
 
 func newOpenRCService(i Interface, platform string, c *Config) (Service, error) {
-	s := &openrc{
+	s := &Openrc{
 		i:        i,
 		platform: platform,
 		Config:   c,
@@ -75,16 +79,15 @@ func newOpenRCService(i Interface, platform string, c *Config) (Service, error) 
 
 var errNoUserServiceOpenRC = errors.New("user services are not supported on OpenRC")
 
-func (s *openrc) configPath() (cp string, err error) {
-	if s.Option.bool(optionUserService, optionUserServiceDefault) {
+func (s *Openrc) configPath() (cp string, err error) {
+	if s.Option.Bool(OptionUserService, OptionUserServiceDefault) {
 		err = errNoUserServiceOpenRC
 		return
 	}
 	cp = "/etc/init.d/" + s.Config.Name
 	return
 }
-
-func (s *openrc) Install() error {
+func (s *Openrc) Install() error {
 	confPath, err := s.configPath()
 	if err != nil {
 		return err
@@ -105,7 +108,7 @@ func (s *openrc) Install() error {
 		return err
 	}
 
-	path, err := s.execPath()
+	path, err := s.ExecPath()
 	if err != nil {
 		return err
 	}
@@ -117,7 +120,7 @@ func (s *openrc) Install() error {
 	}{
 		s.Config,
 		path,
-		s.Option.string(optionLogDirectory, defaultLogDirectory),
+		s.Option.String(OptionLogDirectory, DefaultLogDirectory),
 	}
 
 	err = s.template().Execute(f, to)
@@ -127,8 +130,7 @@ func (s *openrc) Install() error {
 	// run rc-update
 	return s.runAction("add")
 }
-
-func (s *openrc) Uninstall() error {
+func (s *Openrc) Uninstall() error {
 	confPath, err := s.configPath()
 	if err != nil {
 		return err
@@ -138,34 +140,29 @@ func (s *openrc) Uninstall() error {
 	}
 	return s.runAction("delete")
 }
-
-func (s *openrc) Logger(errs chan<- error) (Logger, error) {
-	if system.Interactive() {
-		return ConsoleLogger, nil
+func (s *Openrc) GetLogger(errs chan<- error) (Logger, error) {
+	if Interactive() {
+		return nil, nil
 	}
 	return s.SystemLogger(errs)
 }
-
-func (s *openrc) SystemLogger(errs chan<- error) (Logger, error) {
+func (s *Openrc) SystemLogger(errs chan<- error) (Logger, error) {
 	return newSysLogger(s.Name, errs)
 }
-
-func (s *openrc) Run() (err error) {
+func (s *Openrc) Run() (err error) {
 	err = s.i.Start(s)
 	if err != nil {
 		return err
 	}
-
-	s.Option.funcSingle(optionRunWait, func() {
-		var sigChan = make(chan os.Signal, 3)
-		signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt)
-		<-sigChan
-	})()
-
+	s.(OptionRunWait, func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		<-sig
+		err = s.Stop()
+	})
 	return s.i.Stop(s)
 }
-
-func (s *openrc) Status() (Status, error) {
+func (s *Openrc) Status() (Status, error) {
 	// rc-service uses the errno library for its exit codes:
 	// errno 0 = service started
 	// errno 1 = EPERM 1 Operation not permitted
@@ -193,16 +190,13 @@ func (s *openrc) Status() (Status, error) {
 	}
 	return StatusRunning, nil
 }
-
-func (s *openrc) Start() error {
+func (s *Openrc) Start() error {
 	return run("rc-service", s.Name, "start")
 }
-
-func (s *openrc) Stop() error {
+func (s *Openrc) Stop() error {
 	return run("rc-service", s.Name, "stop")
 }
-
-func (s *openrc) Restart() error {
+func (s *Openrc) Restart() error {
 	err := s.Stop()
 	if err != nil {
 		return err
@@ -210,16 +204,14 @@ func (s *openrc) Restart() error {
 	time.Sleep(50 * time.Millisecond)
 	return s.Start()
 }
-
-func (s *openrc) runAction(action string) error {
+func (s *Openrc) runAction(action string) error {
 	return s.run(action, s.Name)
 }
-
-func (s *openrc) run(action string, args ...string) error {
+func (s *Openrc) run(action string, args ...string) error {
 	return run("rc-update", append([]string{action}, args...)...)
 }
 
-const openRCScript = `#!/sbin/openrc-run
+const OpenRCScript = `#!/sbin/openrc-run
 supervisor=supervise-daemon
 name="{{.DisplayName}}"
 description="{{.Description}}"

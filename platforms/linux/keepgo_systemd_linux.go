@@ -2,12 +2,13 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package linux
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	. "github.com/faelmori/keepgo/internal"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -66,11 +67,9 @@ func (s *systemd) String() string {
 	}
 	return s.Name
 }
-
 func (s *systemd) Platform() string {
 	return s.platform
 }
-
 func (s *systemd) configPath() (cp string, err error) {
 	if !s.isUserService() {
 		cp = "/etc/systemd/system/" + s.unitName()
@@ -88,13 +87,11 @@ func (s *systemd) configPath() (cp string, err error) {
 	cp = filepath.Join(systemdUserDir, s.unitName())
 	return
 }
-
 func (s *systemd) unitName() string {
 	return s.Config.Name + ".service"
 }
-
 func (s *systemd) getSystemdVersion() int64 {
-	_, out, err := s.runWithOutput("systemctl", "--version")
+	_, out, err := s.runWithOutput("systemctl", "--Version")
 	if err != nil {
 		return -1
 	}
@@ -112,7 +109,6 @@ func (s *systemd) getSystemdVersion() int64 {
 
 	return v
 }
-
 func (s *systemd) hasOutputFileSupport() bool {
 	defaultValue := true
 	version := s.getSystemdVersion()
@@ -126,20 +122,17 @@ func (s *systemd) hasOutputFileSupport() bool {
 
 	return defaultValue
 }
-
 func (s *systemd) template() *template.Template {
-	customScript := s.Option.string(optionSystemdScript, "")
+	customScript := s.Option.String(OptionSystemdScript, "")
 
 	if customScript != "" {
 		return template.Must(template.New("").Funcs(tf).Parse(customScript))
 	}
 	return template.Must(template.New("").Funcs(tf).Parse(systemdScript))
 }
-
 func (s *systemd) isUserService() bool {
-	return s.Option.bool(optionUserService, optionUserServiceDefault)
+	return s.Option.Bool(OptionUserService, OptionUserServiceDefault)
 }
-
 func (s *systemd) Install() error {
 	confPath, err := s.configPath()
 	if err != nil {
@@ -156,7 +149,7 @@ func (s *systemd) Install() error {
 	}
 	defer f.Close()
 
-	path, err := s.execPath()
+	path, err := s.ExecPath()
 	if err != nil {
 		return err
 	}
@@ -176,13 +169,13 @@ func (s *systemd) Install() error {
 		s.Config,
 		path,
 		s.hasOutputFileSupport(),
-		s.Option.string(optionReloadSignal, ""),
-		s.Option.string(optionPIDFile, ""),
-		s.Option.int(optionLimitNOFILE, optionLimitNOFILEDefault),
-		s.Option.string(optionRestart, "always"),
-		s.Option.string(optionSuccessExitStatus, ""),
-		s.Option.bool(optionLogOutput, optionLogOutputDefault),
-		s.Option.string(optionLogDirectory, defaultLogDirectory),
+		s.Option.String(OptionReloadSignal, ""),
+		s.Option.String(OptionPIDFile, ""),
+		s.Option.Int(OptionLimitNOFILE, OptionLimitNOFILEDefault),
+		s.Option.String(OptionRestart, "always"),
+		s.Option.String(OptionSuccessExitStatus, ""),
+		s.Option.Bool(OptionLogOutput, OptionLogOutputDefault),
+		s.Option.String(OptionLogDirectory, DefaultLogDirectory),
 	}
 
 	err = s.template().Execute(f, to)
@@ -197,7 +190,6 @@ func (s *systemd) Install() error {
 
 	return s.run("daemon-reload")
 }
-
 func (s *systemd) Uninstall() error {
 	err := s.runAction("disable")
 	if err != nil {
@@ -212,17 +204,19 @@ func (s *systemd) Uninstall() error {
 	}
 	return s.run("daemon-reload")
 }
-
 func (s *systemd) Logger(errs chan<- error) (Logger, error) {
-	if system.Interactive() {
-		return ConsoleLogger, nil
+	if System.Interactive() {
+		return ConsoleLoggerImpl{
+			Out:  os.Stdout,
+			Err:  os.Stderr,
+			Errs: errs,
+		}, nil
 	}
 	return s.SystemLogger(errs)
 }
 func (s *systemd) SystemLogger(errs chan<- error) (Logger, error) {
 	return newSysLogger(s.Name, errs)
 }
-
 func (s *systemd) Run() (err error) {
 	err = s.i.Start(s)
 	if err != nil {
@@ -237,7 +231,6 @@ func (s *systemd) Run() (err error) {
 
 	return s.i.Stop(s)
 }
-
 func (s *systemd) Status() (Status, error) {
 	exitCode, out, err := s.runWithOutput("systemctl", "is-active", s.unitName())
 	if exitCode == 0 && err != nil {
@@ -267,33 +260,27 @@ func (s *systemd) Status() (Status, error) {
 		return StatusUnknown, ErrNotInstalled
 	}
 }
-
 func (s *systemd) Start() error {
 	return s.runAction("start")
 }
-
 func (s *systemd) Stop() error {
 	return s.runAction("stop")
 }
-
 func (s *systemd) Restart() error {
 	return s.runAction("restart")
 }
-
 func (s *systemd) runWithOutput(command string, arguments ...string) (int, string, error) {
 	if s.isUserService() {
 		arguments = append(arguments, "--user")
 	}
 	return runWithOutput(command, arguments...)
 }
-
 func (s *systemd) run(action string, args ...string) error {
 	if s.isUserService() {
 		return run("systemctl", append([]string{action, "--user"}, args...)...)
 	}
 	return run("systemctl", append([]string{action}, args...)...)
 }
-
 func (s *systemd) runAction(action string) error {
 	return s.run(action, s.unitName())
 }

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package linux
 
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	. "github.com/faelmori/keepgo/internal"
 	"os"
 	"strings"
 )
@@ -39,7 +39,7 @@ func init() {
 		name:   "linux-systemd",
 		detect: isSystemd,
 		interactive: func() bool {
-			is, _ := isInteractive()
+			is, _ := IsInteractive()
 			return is
 		},
 		new: newSystemdService,
@@ -48,7 +48,7 @@ func init() {
 			name:   "linux-upstart",
 			detect: isUpstart,
 			interactive: func() bool {
-				is, _ := isInteractive()
+				is, _ := IsInteractive()
 				return is
 			},
 			new: newUpstartService,
@@ -57,7 +57,7 @@ func init() {
 			name:   "linux-openrc",
 			detect: isOpenRC,
 			interactive: func() bool {
-				is, _ := isInteractive()
+				is, _ := IsInteractive()
 				return is
 			},
 			new: newOpenRCService,
@@ -66,7 +66,7 @@ func init() {
 			name:   "linux-rcs",
 			detect: isRCS,
 			interactive: func() bool {
-				is, _ := isInteractive()
+				is, _ := IsInteractive()
 				return is
 			},
 			new: newRCSService,
@@ -75,17 +75,16 @@ func init() {
 			name:   "unix-systemv",
 			detect: func() bool { return true },
 			interactive: func() bool {
-				is, _ := isInteractive()
+				is, _ := IsInteractive()
 				return is
 			},
 			new: newSystemVService,
 		},
 	)
 }
-
-func binaryName(pid int) (string, error) {
+func BinaryName(pid int) (string, error) {
 	statPath := fmt.Sprintf("/proc/%d/stat", pid)
-	dataBytes, err := ioutil.ReadFile(statPath)
+	dataBytes, err := os.ReadFile(statPath)
 	if err != nil {
 		return "", err
 	}
@@ -96,9 +95,8 @@ func binaryName(pid int) (string, error) {
 	binEnd := strings.IndexRune(data[binStart:], ')')
 	return data[binStart : binStart+binEnd], nil
 }
-
-func isInteractive() (bool, error) {
-	inContainer, err := isInContainer(cgroupFile)
+func IsInteractive() (bool, error) {
+	inContainer, err := IsInContainer(cgroupFile)
 	if err != nil {
 		return false, err
 	}
@@ -112,20 +110,19 @@ func isInteractive() (bool, error) {
 		return false, nil
 	}
 
-	binary, _ := binaryName(ppid)
+	binary, _ := BinaryName(ppid)
 	return binary != "systemd", nil
 }
-
-// isInContainer checks if the service is being executed in docker or lxc
-// container.
-func isInContainer(cgroupPath string) (bool, error) {
+func IsInContainer(cgroupPath string) (bool, error) {
 	const maxlines = 5 // maximum lines to scan
 
 	f, err := os.Open(cgroupPath)
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		_ = f.Close()
+	}(f)
 	scan := bufio.NewScanner(f)
 
 	lines := 0

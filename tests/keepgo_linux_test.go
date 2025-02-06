@@ -2,10 +2,11 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package tests
 
 import (
 	"errors"
+	keepgo "github.com/faelmori/keepgo/platforms/linux"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -70,7 +71,7 @@ func Test_isInContainer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := isInContainer(tt.args.cgroupPath)
+			got, err := keepgo.isInContainer(tt.args.cgroupPath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("isInContainer() error = %v, wantErr %v", err, tt.wantErr)
 				return

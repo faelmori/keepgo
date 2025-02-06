@@ -2,7 +2,7 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package windows
 
 import (
 	"fmt"
@@ -545,7 +545,7 @@ func getStopTimeout() time.Duration {
 
 func (ws *windowsService) Logger(errs chan<- error) (Logger, error) {
 	if interactive {
-		return ConsoleLogger, nil
+		return ConsoleLoggerImpl, nil
 	}
 	return ws.SystemLogger(errs)
 }

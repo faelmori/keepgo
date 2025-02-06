@@ -2,7 +2,7 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package linux
 
 import (
 	"bytes"
@@ -233,7 +233,7 @@ func (s *solarisService) Run() error {
 
 func (s *solarisService) Logger(errs chan<- error) (Logger, error) {
 	if interactive {
-		return ConsoleLogger, nil
+		return ConsoleLoggerImpl, nil
 	}
 	return s.SystemLogger(errs)
 }
@@ -241,14 +241,14 @@ func (s *solarisService) SystemLogger(errs chan<- error) (Logger, error) {
 	return newSysLogger(s.Name, errs)
 }
 
-var manifest = `<?xml version="1.0"?>
+var manifest = `<?xml Version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 
 <service_bundle type='manifest' name='golang-{{.Name}}'>
 <service
 	name='{{.Prefix}}/{{.Name}}'
 	type='service'
-	version='1'>
+	Version='1'>
 	
 	<create_default_instance enabled='false' />
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a zlib-style
 // license that can be found in the LICENSE file.
 
-package keepgo
+package linux
 
 import (
 	"errors"
@@ -30,15 +30,12 @@ type darwinSystem struct{}
 func (darwinSystem) String() string {
 	return version
 }
-
 func (darwinSystem) Detect() bool {
 	return true
 }
-
 func (darwinSystem) Interactive() bool {
 	return interactive
 }
-
 func (darwinSystem) New(i Interface, c *Config) (Service, error) {
 	s := &darwinLaunchdService{
 		i:      i,
@@ -82,11 +79,9 @@ func (s *darwinLaunchdService) String() string {
 	}
 	return s.Name
 }
-
 func (s *darwinLaunchdService) Platform() string {
 	return version
 }
-
 func (s *darwinLaunchdService) getHomeDir() (string, error) {
 	u, err := user.Current()
 	if err == nil {
@@ -100,7 +95,6 @@ func (s *darwinLaunchdService) getHomeDir() (string, error) {
 	}
 	return homeDir, nil
 }
-
 func (s *darwinLaunchdService) getServiceFilePath() (string, error) {
 	if s.userService {
 		homeDir, err := s.getHomeDir()
@@ -111,7 +105,6 @@ func (s *darwinLaunchdService) getServiceFilePath() (string, error) {
 	}
 	return "/Library/LaunchDaemons/" + s.Name + ".plist", nil
 }
-
 func (s *darwinLaunchdService) logDir() (string, error) {
 	if customDir := s.Option.string(optionLogDirectory, ""); customDir != "" {
 		return customDir, nil
@@ -121,7 +114,6 @@ func (s *darwinLaunchdService) logDir() (string, error) {
 	}
 	return s.getHomeDir()
 }
-
 func (s *darwinLaunchdService) getLogPaths() (string, string, error) {
 	logDir, err := s.logDir()
 	if err != nil {
@@ -129,11 +121,9 @@ func (s *darwinLaunchdService) getLogPaths() (string, string, error) {
 	}
 	return s.getLogPath(logDir, "out"), s.getLogPath(logDir, "err"), nil
 }
-
 func (s *darwinLaunchdService) getLogPath(logDir, logType string) string {
 	return fmt.Sprintf("%s/%s.%s.log", logDir, s.Name, logType)
 }
-
 func (s *darwinLaunchdService) template() *template.Template {
 	functions := template.FuncMap{
 		"bool": func(v bool) string {
@@ -151,7 +141,6 @@ func (s *darwinLaunchdService) template() *template.Template {
 	}
 	return template.Must(template.New("").Funcs(functions).Parse(launchdConfig))
 }
-
 func (s *darwinLaunchdService) Install() error {
 	confPath, err := s.getServiceFilePath()
 	if err != nil {
@@ -202,7 +191,6 @@ func (s *darwinLaunchdService) Install() error {
 
 	return s.template().Execute(f, to)
 }
-
 func (s *darwinLaunchdService) Uninstall() error {
 	s.Stop()
 
@@ -212,7 +200,6 @@ func (s *darwinLaunchdService) Uninstall() error {
 	}
 	return os.Remove(confPath)
 }
-
 func (s *darwinLaunchdService) Status() (Status, error) {
 	exitCode, out, err := runWithOutput("launchctl", "list", s.Name)
 	if exitCode == 0 && err != nil {
@@ -238,7 +225,6 @@ func (s *darwinLaunchdService) Status() (Status, error) {
 
 	return StatusUnknown, ErrNotInstalled
 }
-
 func (s *darwinLaunchdService) Start() error {
 	confPath, err := s.getServiceFilePath()
 	if err != nil {
@@ -246,7 +232,6 @@ func (s *darwinLaunchdService) Start() error {
 	}
 	return run("launchctl", "load", confPath)
 }
-
 func (s *darwinLaunchdService) Stop() error {
 	confPath, err := s.getServiceFilePath()
 	if err != nil {
@@ -254,7 +239,6 @@ func (s *darwinLaunchdService) Stop() error {
 	}
 	return run("launchctl", "unload", confPath)
 }
-
 func (s *darwinLaunchdService) Restart() error {
 	err := s.Stop()
 	if err != nil {
@@ -263,7 +247,6 @@ func (s *darwinLaunchdService) Restart() error {
 	time.Sleep(50 * time.Millisecond)
 	return s.Start()
 }
-
 func (s *darwinLaunchdService) Run() error {
 	err := s.i.Start(s)
 	if err != nil {
@@ -278,21 +261,19 @@ func (s *darwinLaunchdService) Run() error {
 
 	return s.i.Stop(s)
 }
-
 func (s *darwinLaunchdService) Logger(errs chan<- error) (Logger, error) {
 	if interactive {
-		return ConsoleLogger, nil
+		return ConsoleLoggerImpl, nil
 	}
 	return s.SystemLogger(errs)
 }
-
 func (s *darwinLaunchdService) SystemLogger(errs chan<- error) (Logger, error) {
 	return newSysLogger(s.Name, errs)
 }
 
-var launchdConfig = `<?xml version="1.0" encoding="UTF-8"?>
+var launchdConfig = `<?xml Version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
+<plist Version="1.0">
 <dict>
 	<key>Disabled</key>
 	<false/>
