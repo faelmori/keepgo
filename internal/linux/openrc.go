@@ -1,12 +1,13 @@
 package linux
 
 import (
+	"github.com/faelmori/keepgo/runners"
 	"github.com/faelmori/keepgo/service"
 	"os/exec"
 	"time"
 )
 
-func NewOpenRCService(i service.Controller, platform string, c *service.Config) (service.Service, error) {
+func NewOpenRCService(i service.Controller, platform string, c *service.Config, r *runners.Runner) (service.Service, error) {
 	return &openRCService{Name: c.Name}, nil
 }
 

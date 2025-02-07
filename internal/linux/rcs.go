@@ -1,12 +1,13 @@
 package linux
 
 import (
+	"github.com/faelmori/keepgo/runners"
 	"github.com/faelmori/keepgo/service"
 	"os/exec"
 	"time"
 )
 
-func NewRCSService(i service.Controller, platform string, c *service.Config) (service.Service, error) {
+func NewRCSService(i service.Controller, platform string, c *service.Config, r *runners.Runner) (service.Service, error) {
 	return &rcsService{Name: c.Name}, nil
 }
 

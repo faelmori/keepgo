@@ -16,13 +16,13 @@ import (
 	"text/template"
 )
 
-func NewSystemdService(i service.Controller, platform string, c *service.Config) (service.Service, error) {
+func NewSystemdService(i service.Controller, platform string, c *service.Config, r *runners.Runner) (service.Service, error) {
 	return &systemdService{
 		Name:     c.Name,
 		Config:   c,
 		i:        i,
 		platform: platform,
-		//runner:   r,
+		runner:   r,
 	}, nil
 }
 

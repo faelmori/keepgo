@@ -1,13 +1,16 @@
 package linux
 
 import (
+	"github.com/faelmori/keepgo/runners"
 	"github.com/faelmori/keepgo/service"
 	"os/exec"
 	"time"
 )
 
-func NewUpstartService(i service.Controller, platform string, c *service.Config) (service.Service, error) {
-	return &upstartService{Name: c.Name}, nil
+func NewUpstartService(i service.Controller, platform string, c *service.Config, r *runners.Runner) (service.Service, error) {
+	return &upstartService{
+		Name: c.Name,
+	}, nil
 }
 
 type upstartService struct {

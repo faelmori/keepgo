@@ -23,7 +23,7 @@ func TestSystemdServiceStatus(t *testing.T) {
 	config := &service.Config{Name: "test-service"}
 	ctrl := &mockController{}
 	//runner := &RunnerImpl{}
-	svc, err := lnx.NewSystemdService(ctrl, "linux-systemd", config)
+	svc, err := lnx.NewSystemdService(ctrl, "linux-systemd", config, nil)
 	if err != nil {
 		t.Fatalf("Failed to create systemd service: %v", err)
 	}

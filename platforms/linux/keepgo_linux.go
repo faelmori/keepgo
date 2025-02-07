@@ -5,6 +5,7 @@ import (
 	"fmt"
 	linux "github.com/faelmori/keepgo/bkp"
 	lnx "github.com/faelmori/keepgo/internal/linux"
+	"github.com/faelmori/keepgo/runners"
 	"github.com/faelmori/keepgo/service"
 	"os"
 	"strings"
@@ -16,7 +17,8 @@ type linuxSystemService struct {
 	name        string
 	detect      func() bool
 	interactive func() bool
-	new         func(i service.Controller, platform string, c *service.Config) (service.Service, error)
+	new         func(i service.Controller, platform string, c *service.Config, r *runners.Runner) (service.Service, error)
+	runner      *runners.Runner
 }
 
 func (sc linuxSystemService) String() string {
@@ -29,7 +31,7 @@ func (sc linuxSystemService) Interactive() bool {
 	return sc.interactive()
 }
 func (sc linuxSystemService) New(i service.Controller, c *service.Config) (service.Service, error) {
-	return sc.new(i, sc.String(), c)
+	return sc.new(i, sc.String(), c, sc.runner)
 }
 
 func init() {
@@ -91,12 +93,8 @@ func init() {
 		})
 	}
 
-	// Passa apenas os sistemas detectados
-	if len(systems) == 0 {
-		return
-	}
-	for _, system := range systems {
-		service.ChooseSystem(system)
+	for _, s := range systems {
+		service.ChooseSystem(s)
 	}
 }
 
