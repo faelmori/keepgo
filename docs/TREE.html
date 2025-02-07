@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="Author" content="Rafael Mori">
+	<title>Project Tree</title>
+	<style>
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			color: #333;
+			background-color: #f4f4f9;
+			margin: 0;
+			padding: 0;
+		}
+		header {
+			background-color: #4CAF50;
+			color: white;
+			padding: 10px 20px;
+			text-align: center;
+			position: fixed;
+			width: 100%;
+			top: 0;
+			z-index: 1000;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+		main {
+			padding: 60px 20px 20px 20px;
+		}
+		pre {
+			background-color: #fff;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			padding: 20px;
+			overflow: auto;
+		}
+		.dir {
+			color: #1E90FF;
+			font-weight: bold;
+		}
+		.file {
+			color: #333;
+		}
+		.exec {
+			color: #32CD32;
+		}
+		.icon {
+			margin-right: 5px;
+		}
+		.comment {
+			color: #FF4500;
+			font-style: italic;
+		}
+		.nav-button {
+			background-color: #fff;
+			color: #4CAF50;
+			border: 2px solid #4CAF50;
+			border-radius: 4px;
+			padding: 5px 10px;
+			cursor: pointer;
+			font-size: 16px;
+		}
+		.nav-button:hover {
+			background-color: #4CAF50;
+			color: white;
+		}
+	</style>
+</head>
+<body>
+<header>
+	<h1>KeepGo Project Tree</h1>
+	<button class="nav-button" onclick="window.location.href='otherpage.html'">Go to Markdown</button>
+</header>
+<main>
+    <pre style="margin-top: 75px;">
+📂 root/
+├── 📂 build/
+│   └── 📄 appveyor.yml
+├── 📂 cmd/                    <span class="comment"># Contém arquivos de execução</span>
+│   └── 📄 console.go
+├── 📂 example/                <span class="comment"># Exemplos de uso</span>
+│   ├── 📂 logging/
+│   │   └── 📄 main.go
+│   ├── 📂 runner/
+│   │   ├── 📄 runner.go
+│   │   └── 📄 runner.json
+│   ├── 📂 simple/
+│   │   └── 📄 main.go
+│   └── 📂 stopPause/
+│       └── 📄 main.go
+├── 📂 internal/                <span class="comment"># Implementações internas</span>
+│   └── 📂 linux/
+│       ├── 📄 logger.go
+│       ├── 📄 openrc.go
+│       ├── 📄 rcs.go
+│       ├── 📄 systemd.go
+│       ├── 📄 unix.go
+│       └── 📄 upstart.go
+├── 📂 platforms/               <span class="comment"># Código específico para cada plataforma</span>
+│   ├── 📂 linux/
+│   │   ├── 📄 keepgo_linux.go
+│   │   ├── 📄 keepgo_solaris.go
+│   │   └── 📄 keepgo_unix.go
+│   ├── 📂 macos/
+│   │   └── 📄 keepgo_macos.go
+│   └── 📂 windows/
+│       └── 📄 keepgo_windows.go
+├── 📂 scripts/                 <span class="comment"># Scripts auxiliares</span>
+│   └── 📄 linux-test-su.sh
+├── 📂 service/                 <span class="comment"># Módulo principal do serviço</span>
+│   ├── 📄 keepgo.go
+│   ├── 📄 main.go
+│   ├── 📄 options.go
+│   ├── 📄 options_old.go
+│   └── 📄 version.go
+├── 📂 tests/                   <span class="comment"># Arquivos de teste</span>
+│   ├── 📂 linux_test/
+│   │   ├── 📄 openrc/Dockerfile
+│   │   ├── 📄 systemd/Dockerfile
+│   │   ├── 📄 sysv/Dockerfile
+│   │   ├── 📄 upstart/Dockerfile
+│   │   ├── 📄 Makefile
+│   │   └── 📄 README.md
+│   ├── 📄 keepgo_linux_test.go
+│   ├── 📄 keepgo_nosu_test.go
+│   ├── 📄 keepgo_su_test.go
+│   ├── 📄 keepgo_test.go
+│   ├── 📄 keepgotest_unix_test.go
+│   ├── 📄 keepgotest_windows_test.go
+│   ├── 📄 keepgo_windows_test.go
+│   ├── 📄 name_test.go
+│   └── 📄 version_test.go
+├── 📄 go.mod
+├── 📄 go.sum
+├── 📄 keepgo.go
+├── 📄 LICENSE
+├── 📄 README.md
+└── 📄 TREE.html
+    </pre>
+	<p>22 directories, 45 files</p>
+</main>
+</body>
+</html> 

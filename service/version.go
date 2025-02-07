@@ -1,4 +1,4 @@
-package keepgo
+package service
 
 import (
 	"errors"

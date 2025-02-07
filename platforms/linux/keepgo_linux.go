@@ -1,13 +1,11 @@
-// Copyright 2015 Daniel Theophanes.
-// Use of this source code is governed by a zlib-style
-// license that can be found in the LICENSE file.
-
 package linux
 
 import (
 	"bufio"
 	"fmt"
-	. "github.com/faelmori/keepgo/internal"
+	lnx "github.com/faelmori/keepgo/internal/linux"
+	"github.com/faelmori/keepgo/runners"
+	"github.com/faelmori/keepgo/service"
 	"os"
 	"strings"
 )
@@ -18,7 +16,8 @@ type linuxSystemService struct {
 	name        string
 	detect      func() bool
 	interactive func() bool
-	new         func(i Controller, platform string, c *Config) (Service, error)
+	new         func(i service.Controller, platform string, c *service.Config, r *runners.Runner) (service.Service, error)
+	runner      *runners.Runner
 }
 
 func (sc linuxSystemService) String() string {
@@ -30,58 +29,74 @@ func (sc linuxSystemService) Detect() bool {
 func (sc linuxSystemService) Interactive() bool {
 	return sc.interactive()
 }
-func (sc linuxSystemService) New(i Controller, c *Config) (Service, error) {
-	return sc.new(i, sc.String(), c)
+func (sc linuxSystemService) New(i service.Controller, c *service.Config) (service.Service, error) {
+	return sc.new(i, sc.String(), c, sc.runner)
 }
 
 func init() {
-	ChooseSystem(linuxSystemService{
-		name:   "linux-systemd",
-		detect: isSystemd,
-		interactive: func() bool {
-			is, _ := IsInteractive()
-			return is
-		},
-		new: newSystemdService,
-	},
-		linuxSystemService{
+	systems := make([]linuxSystemService, 0)
+
+	if lnx.IsSystemd() {
+		systems = append(systems, linuxSystemService{
+			name:   "linux-systemd",
+			detect: lnx.IsSystemd,
+			interactive: func() bool {
+				is, _ := IsInteractive()
+				return is
+			},
+			new: lnx.NewSystemdService,
+		})
+	}
+	if lnx.IsUpstart() {
+		systems = append(systems, linuxSystemService{
 			name:   "linux-upstart",
-			detect: IsUpstart,
+			detect: lnx.IsUpstart,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: newUpstartService,
-		},
-		linuxSystemService{
+			new: lnx.NewUpstartService,
+		})
+	}
+	if lnx.IsOpenRC() {
+		systems = append(systems, linuxSystemService{
 			name:   "linux-openrc",
-			detect: IsOpenRC,
+			detect: lnx.IsOpenRC,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: newOpenRCService,
-		},
-		linuxSystemService{
+			new: lnx.NewOpenRCService,
+		})
+	}
+	if lnx.IsRCS() {
+		systems = append(systems, linuxSystemService{
 			name:   "linux-rcs",
-			detect: isRCS,
+			detect: lnx.IsRCS,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: newRCSService,
-		},
-		linuxSystemService{
-			name:   "unix-systemv",
-			detect: func() bool { return true },
+			new: lnx.NewRCSService,
+		})
+	}
+	if lnx.IsUnix() {
+		systems = append(systems, linuxSystemService{
+			name:   "unix",
+			detect: lnx.IsUnix,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: newSystemVService,
-		},
-	)
+			new: lnx.NewUnixService,
+		})
+	}
+
+	for _, s := range systems {
+		service.ChooseSystem(s)
+	}
 }
+
 func BinaryName(pid int) (string, error) {
 	statPath := fmt.Sprintf("/proc/%d/stat", pid)
 	dataBytes, err := os.ReadFile(statPath)
@@ -89,12 +104,12 @@ func BinaryName(pid int) (string, error) {
 		return "", err
 	}
 
-	// First, parse out the image name
 	data := string(dataBytes)
 	binStart := strings.IndexRune(data, '(') + 1
 	binEnd := strings.IndexRune(data[binStart:], ')')
 	return data[binStart : binStart+binEnd], nil
 }
+
 func IsInteractive() (bool, error) {
 	inContainer, err := IsInContainer(CgroupFile)
 	if err != nil {
@@ -113,16 +128,15 @@ func IsInteractive() (bool, error) {
 	binary, _ := BinaryName(ppid)
 	return binary != "systemd", nil
 }
+
 func IsInContainer(cgroupPath string) (bool, error) {
-	const maxlines = 5 // maximum lines to scan
+	const maxlines = 5
 
 	f, err := os.Open(cgroupPath)
 	if err != nil {
 		return false, err
 	}
-	defer func(f *os.File) {
-		_ = f.Close()
-	}(f)
+	defer f.Close()
 	scan := bufio.NewScanner(f)
 
 	lines := 0
@@ -137,13 +151,4 @@ func IsInContainer(cgroupPath string) (bool, error) {
 	}
 
 	return false, nil
-}
-
-var tf = map[string]interface{}{
-	"cmd": func(s string) string {
-		return `"` + strings.Replace(s, `"`, `\"`, -1) + `"`
-	},
-	"cmdEscape": func(s string) string {
-		return strings.Replace(s, " ", `\x20`, -1)
-	},
 }
