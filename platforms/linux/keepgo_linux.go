@@ -3,7 +3,6 @@ package linux
 import (
 	"bufio"
 	"fmt"
-	linux "github.com/faelmori/keepgo/bkp"
 	lnx "github.com/faelmori/keepgo/internal/linux"
 	"github.com/faelmori/keepgo/runners"
 	"github.com/faelmori/keepgo/service"
@@ -51,7 +50,7 @@ func init() {
 	if lnx.IsUpstart() {
 		systems = append(systems, linuxSystemService{
 			name:   "linux-upstart",
-			detect: linux.IsUpstart,
+			detect: lnx.IsUpstart,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
