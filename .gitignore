@@ -5,3 +5,15 @@
 /.idea/workspace.xml
 /.idea/keepgo.iml
 /.idea/modules.xml
+/bkp/
+/bkp/keepgo_aix.go
+/bkp/keepgo_darwin.go
+/bkp/keepgo_freebsd.go
+/bkp/keepgo_linux.go
+/bkp/keepgo_openrc_linux.go
+/bkp/keepgo_rcs_linux.go
+/bkp/keepgo_solaris.go
+/bkp/keepgo_systemd_linux.go
+/bkp/keepgo_sysv_linux.go
+/bkp/keepgo_unix.go
+/bkp/keepgo_upstart_linux.go
