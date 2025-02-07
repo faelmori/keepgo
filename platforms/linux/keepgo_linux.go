@@ -3,11 +3,10 @@ package linux
 import (
 	"bufio"
 	"fmt"
+	"github.com/faelmori/keepgo/internal/linux"
 	"github.com/faelmori/keepgo/service"
 	"os"
-	"os/exec"
 	"strings"
-	"time"
 )
 
 var CgroupFile = "/proc/1/cgroup"
@@ -33,52 +32,66 @@ func (sc linuxSystemService) New(i service.Controller, c *service.Config) (servi
 }
 
 func init() {
-	service.ChooseSystem(linuxSystemService{
-		name:   "linux-systemd",
-		detect: isSystemd,
-		interactive: func() bool {
-			is, _ := IsInteractive()
-			return is
-		},
-		new: newSystemdService,
-	},
-		linuxSystemService{
+	var systems []linuxSystemService
+
+	if linux.IsSystemd() {
+		systems = append(systems, linuxSystemService{
+			name:   "linux-systemd",
+			detect: linux.IsSystemd,
+			interactive: func() bool {
+				is, _ := IsInteractive()
+				return is
+			},
+			new: linux.NewSystemdService,
+		})
+	}
+	if linux.IsUpstart() {
+		systems = append(systems, linuxSystemService{
 			name:   "linux-upstart",
-			detect: IsUpstart,
+			detect: linux.IsUpstart,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: newUpstartService,
-		},
-		linuxSystemService{
+			new: linux.NewUpstartService,
+		})
+	}
+	if linux.IsOpenRC() {
+		systems = append(systems, linuxSystemService{
 			name:   "linux-openrc",
-			detect: service.Op.IsOpenRC,
+			detect: linux.IsOpenRC,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: newOpenRCService,
-		},
-		linuxSystemService{
+			new: linux.NewOpenRCService,
+		})
+	}
+	if linux.IsRCS() {
+		systems = append(systems, linuxSystemService{
 			name:   "linux-rcs",
-			detect: isRCS,
+			detect: linux.IsRCS,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: newRCSService,
-		},
-		linuxSystemService{
-			name:   "unix-systemv",
-			detect: func() bool { return true },
+			new: linux.NewRCSService,
+		})
+	}
+	if linux.IsUnix() {
+		systems = append(systems, linuxSystemService{
+			name:   "unix",
+			detect: linux.IsUnix,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: newSystemVService,
-		},
-	)
+			new: linux.NewUnixService,
+		})
+	}
+
+	// Passa apenas os sistemas detectados
+	service.ChooseSystem(systems...)
 }
 
 func BinaryName(pid int) (string, error) {
@@ -135,30 +148,4 @@ func IsInContainer(cgroupPath string) (bool, error) {
 	}
 
 	return false, nil
-}
-
-func run(command string, arguments ...string) error {
-	cmd := exec.Command(command, arguments...)
-	return cmd.Run()
-}
-
-type linuxService struct {
-	Name string
-}
-
-func (s *linuxService) Start() error {
-	return run("/bin/systemctl", "start", s.Name)
-}
-
-func (s *linuxService) Stop() error {
-	return run("/bin/systemctl", "stop", s.Name)
-}
-
-func (s *linuxService) Restart() error {
-	err := s.Stop()
-	if err != nil {
-		return err
-	}
-	time.Sleep(50 * time.Millisecond)
-	return s.Start()
 }

@@ -9,41 +9,6 @@ import (
 	"fmt"
 )
 
-const (
-	OptionKeepAlive            = "KeepAlive"
-	OptionKeepAliveDefault     = true
-	OptionRunAtLoad            = "RunAtLoad"
-	OptionRunAtLoadDefault     = false
-	OptionUserService          = "UserService"
-	OptionUserServiceDefault   = false
-	OptionSessionCreate        = "SessionCreate"
-	OptionSessionCreateDefault = false
-	OptionLogOutput            = "LogOutput"
-	OptionLogOutputDefault     = false
-	OptionPrefix               = "Prefix"
-	OptionPrefixDefault        = "application"
-
-	OptionRunWait            = "RunWait"
-	OptionReloadSignal       = "ReloadSignal"
-	OptionPIDFile            = "PIDFile"
-	OptionLimitNOFILE        = "LimitNOFILE"
-	OptionLimitNOFILEDefault = -1 // -1 = don't set in configuration
-	OptionRestart            = "Restart"
-	OptionSuccessExitStatus  = "SuccessExitStatus"
-
-	OptionSystemdScript = "SystemdScript"
-	OptionSysvScript    = "SysvScript"
-	OptionRCSScript     = "RCSScript"
-	OptionUpstartScript = "UpstartScript"
-	OptionLaunchdConfig = "LaunchdConfig"
-	OptionOpenRCScript  = "OpenRCScript"
-	OptionLogDirectory  = "LogDirectory"
-
-	StatusUnknown Status = iota // Status is unable to be determined due to an error or it was not installed.
-	StatusRunning
-	StatusStopped
-)
-
 var (
 	SystemVar         System
 	SystemVarRegistry []System
