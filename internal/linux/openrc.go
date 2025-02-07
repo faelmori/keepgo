@@ -22,8 +22,8 @@ func (s *openRCService) SystemLogger(errs chan<- error) (service.Logger, error) 
 func (s *openRCService) String() string                  { panic("implement me") }
 func (s *openRCService) Platform() string                { panic("implement me") }
 func (s *openRCService) Status() (service.Status, error) { panic("implement me") }
-func (s *openRCService) Start() error                    { return run("/etc/init.d/"+s.Name, "start") }
-func (s *openRCService) Stop() error                     { return run("/etc/init.d/"+s.Name, "stop") }
+func (s *openRCService) Start() error                    { return runOpenRCCommand("/etc/init.d/"+s.Name, "start") }
+func (s *openRCService) Stop() error                     { return runOpenRCCommand("/etc/init.d/"+s.Name, "stop") }
 
 func (s *openRCService) Restart() error {
 	err := s.Stop()
@@ -32,6 +32,11 @@ func (s *openRCService) Restart() error {
 	}
 	time.Sleep(50 * time.Millisecond)
 	return s.Start()
+}
+
+func runOpenRCCommand(command string, arguments ...string) error {
+	cmd := exec.Command(command, arguments...)
+	return cmd.Run()
 }
 
 func IsOpenRC() bool {

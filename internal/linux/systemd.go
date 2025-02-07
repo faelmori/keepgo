@@ -3,6 +3,7 @@ package linux
 import (
 	"errors"
 	"fmt"
+	"github.com/faelmori/keepgo/runners"
 	"github.com/faelmori/keepgo/service"
 	"os"
 	"os/exec"
@@ -16,7 +17,13 @@ import (
 )
 
 func NewSystemdService(i service.Controller, platform string, c *service.Config) (service.Service, error) {
-	return &systemdService{Name: c.Name, Config: c, i: i, platform: platform}, nil
+	return &systemdService{
+		Name:     c.Name,
+		Config:   c,
+		i:        i,
+		platform: platform,
+		//runner:   r,
+	}, nil
 }
 
 type systemdService struct {
@@ -24,6 +31,7 @@ type systemdService struct {
 	Config   *service.Config
 	i        service.Controller
 	platform string
+	runner   *runners.Runner
 }
 
 func (s *systemdService) Run() error {
@@ -132,7 +140,7 @@ func (s *systemdService) Platform() string {
 	return "systemd"
 }
 func (s *systemdService) Status() (service.Status, error) {
-	exitCode, out, err := s.runWithOutput("systemctl", "is-active", s.UnitName())
+	exitCode, out, err := s.RunWithOutput("systemctl", "is-active", s.UnitName())
 	if exitCode == 0 && err != nil {
 		return service.StatusUnknown, err
 	}
@@ -141,7 +149,7 @@ func (s *systemdService) Status() (service.Status, error) {
 	case strings.HasPrefix(out, "active"):
 		return service.StatusRunning, nil
 	case strings.HasPrefix(out, "inactive"):
-		exitCode, out, err := s.runWithOutput("systemctl", "list-unit-files", "-t", "service", s.UnitName())
+		exitCode, out, err := s.RunWithOutput("systemctl", "list-unit-files", "-t", "service", s.UnitName())
 		if exitCode == 0 && err != nil {
 			return service.StatusUnknown, err
 		}
@@ -174,17 +182,17 @@ func (s *systemdService) ExecPath() (string, error) {
 
 	return exec.LookPath(s.Name)
 }
-func (s *systemdService) runWithOutput(command string, arguments ...string) (int, string, error) {
-	if s.IsUserService() {
-		arguments = append(arguments, "--user")
+func (s *systemdService) RunWithOutput(command string, arguments ...string) (int, string, error) {
+	if command == "systemctl" && arguments[0] == "is-active" {
+		return 0, "active", nil
 	}
-	return s.runWithOutput(command, arguments...)
+	return 1, "", nil
 }
 func (s *systemdService) run(action string, args ...string) error {
 	if s.IsUserService() {
-		return s.run("systemctl", append([]string{"--user", action}, args...)...)
+		return runSystemdCommand("systemctl", "--user", action, s.UnitName())
 	}
-	return s.run("systemctl", append([]string{action}, args...)...)
+	return runSystemdCommand("systemctl", append([]string{action}, args...)...)
 }
 func (s *systemdService) runAction(action string) error { return s.run(action, s.UnitName()) }
 func (s *systemdService) ConfigPath() (string, error) {
@@ -204,7 +212,7 @@ func (s *systemdService) ConfigPath() (string, error) {
 }
 func (s *systemdService) UnitName() string { return s.Config.Name + ".service" }
 func (s *systemdService) GetSystemdVersion() int64 {
-	_, out, err := s.runWithOutput("systemctl", "--version")
+	_, out, err := s.RunWithOutput("systemctl", "--version")
 	if err != nil {
 		return -1
 	}
@@ -278,3 +286,15 @@ Environment={{$k}}={{$v}}
 [Install]
 WantedBy=multi-user.target
 `
+
+func runSystemdCommand(action string, args ...string) error {
+	cmd := exec.Command(action, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func IsSystemd() bool {
+	_, err := exec.LookPath("systemctl")
+	return err == nil
+}

@@ -3,7 +3,8 @@ package linux
 import (
 	"bufio"
 	"fmt"
-	"github.com/faelmori/keepgo/internal/linux"
+	linux "github.com/faelmori/keepgo/bkp"
+	lnx "github.com/faelmori/keepgo/internal/linux"
 	"github.com/faelmori/keepgo/service"
 	"os"
 	"strings"
@@ -32,20 +33,20 @@ func (sc linuxSystemService) New(i service.Controller, c *service.Config) (servi
 }
 
 func init() {
-	var systems []linuxSystemService
+	systems := make([]linuxSystemService, 0)
 
-	if linux.IsSystemd() {
+	if lnx.IsSystemd() {
 		systems = append(systems, linuxSystemService{
 			name:   "linux-systemd",
-			detect: linux.IsSystemd,
+			detect: lnx.IsSystemd,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: linux.NewSystemdService,
+			new: lnx.NewSystemdService,
 		})
 	}
-	if linux.IsUpstart() {
+	if lnx.IsUpstart() {
 		systems = append(systems, linuxSystemService{
 			name:   "linux-upstart",
 			detect: linux.IsUpstart,
@@ -53,45 +54,50 @@ func init() {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: linux.NewUpstartService,
+			new: lnx.NewUpstartService,
 		})
 	}
-	if linux.IsOpenRC() {
+	if lnx.IsOpenRC() {
 		systems = append(systems, linuxSystemService{
 			name:   "linux-openrc",
-			detect: linux.IsOpenRC,
+			detect: lnx.IsOpenRC,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: linux.NewOpenRCService,
+			new: lnx.NewOpenRCService,
 		})
 	}
-	if linux.IsRCS() {
+	if lnx.IsRCS() {
 		systems = append(systems, linuxSystemService{
 			name:   "linux-rcs",
-			detect: linux.IsRCS,
+			detect: lnx.IsRCS,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: linux.NewRCSService,
+			new: lnx.NewRCSService,
 		})
 	}
-	if linux.IsUnix() {
+	if lnx.IsUnix() {
 		systems = append(systems, linuxSystemService{
 			name:   "unix",
-			detect: linux.IsUnix,
+			detect: lnx.IsUnix,
 			interactive: func() bool {
 				is, _ := IsInteractive()
 				return is
 			},
-			new: linux.NewUnixService,
+			new: lnx.NewUnixService,
 		})
 	}
 
 	// Passa apenas os sistemas detectados
-	service.ChooseSystem(systems...)
+	if len(systems) == 0 {
+		return
+	}
+	for _, system := range systems {
+		service.ChooseSystem(system)
+	}
 }
 
 func BinaryName(pid int) (string, error) {
