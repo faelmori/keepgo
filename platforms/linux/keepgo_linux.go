@@ -96,7 +96,6 @@ func init() {
 		service.ChooseSystem(s)
 	}
 }
-
 func BinaryName(pid int) (string, error) {
 	statPath := fmt.Sprintf("/proc/%d/stat", pid)
 	dataBytes, err := os.ReadFile(statPath)
@@ -109,7 +108,6 @@ func BinaryName(pid int) (string, error) {
 	binEnd := strings.IndexRune(data[binStart:], ')')
 	return data[binStart : binStart+binEnd], nil
 }
-
 func IsInteractive() (bool, error) {
 	inContainer, err := IsInContainer(CgroupFile)
 	if err != nil {
@@ -128,7 +126,6 @@ func IsInteractive() (bool, error) {
 	binary, _ := BinaryName(ppid)
 	return binary != "systemd", nil
 }
-
 func IsInContainer(cgroupPath string) (bool, error) {
 	const maxlines = 5
 
