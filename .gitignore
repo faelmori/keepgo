@@ -17,3 +17,8 @@
 /bkp/keepgo_sysv_linux.go
 /bkp/keepgo_unix.go
 /bkp/keepgo_upstart_linux.go
+/.idea/inspectionProfiles/
+/.idea/developer-tools.xml
+/keepgo.iml
+/keepgo
+/.idea/

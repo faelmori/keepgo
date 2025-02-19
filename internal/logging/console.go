@@ -1,12 +1,9 @@
-// Copyright 2015 Daniel Theophanes.
-// Use of this source code is governed by a zlib-style
-// license that can be found in the LICENSE file.
-
-package cmd
+package logging
 
 import (
 	"log"
 	"os"
+	"strings"
 )
 
 var ConsoleLoggerObj = ConsoleLoggerImpl{}
@@ -44,4 +41,23 @@ func (c ConsoleLoggerImpl) Warningf(format string, a ...interface{}) error {
 func (c ConsoleLoggerImpl) Infof(format string, a ...interface{}) error {
 	c.info.Printf(format, a...)
 	return nil
+}
+
+func GetDescriptions(descriptionArg []string, _ bool) map[string]string {
+	var description, banner string
+	if descriptionArg != nil {
+		if strings.Contains(strings.Join(os.Args[0:], ""), "-h") {
+			description = descriptionArg[0]
+		} else {
+			description = descriptionArg[1]
+		}
+	}
+	banner = `    __ __                ______    
+   / //_/__  ___  ____  / ____/___ 
+  / ,< / _ \/ _ \/ __ \/ / __/ __ \
+ / /| /  __/  __/ /_/ / /_/ / /_/ /
+/_/ |_\___/\___/ .___/\____/\____/ 
+              /_/                  
+`
+	return map[string]string{"banner": banner, "description": description}
 }

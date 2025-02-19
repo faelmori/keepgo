@@ -1,9 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"github.com/faelmori/kbx/mods/logz"
+	"github.com/faelmori/keepgo/cmd"
+)
 
 func main() {
-	fmt.Println("Development in progress")
-
-	return
+	if err := cmd.ExecuteKeepGo(); err != nil {
+		logz.Panic(err)
+	}
 }

@@ -7,6 +7,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/faelmori/keepgo/internal/options"
 )
 
 var (
@@ -22,33 +23,20 @@ var (
 	ControlAction   = [5]string{"start", "stop", "restart", "install", "uninstall"}
 )
 
-type Status byte
-type Config struct {
-	Name             string   // Required name of the service. No spaces suggested.
-	DisplayName      string   // Display name, spaces allowed.
-	Description      string   // Long description of service.
-	UserName         string   // Run as username.
-	Arguments        []string // Run with arguments.
-	Executable       string
-	Dependencies     []string
-	WorkingDirectory string // Initial working directory.
-	ChRoot           string
-	Option           KeyValue
-	EnvVars          map[string]string
-}
+type Config struct{ options.IConfig }
 type KeyValue map[string]interface{}
+type Logger interface {
+	Error(v ...interface{}) error
+	Warning(v ...interface{}) error
+	Info(v ...interface{}) error
+	Errorf(format string, a ...interface{}) error
+	Warningf(format string, a ...interface{}) error
+	Infof(format string, a ...interface{}) error
+}
 type System interface {
-	// String returns a description of the SystemVar.
 	String() string
-
-	// Detect returns true if the SystemVar is available to use.
 	Detect() bool
-
-	// Interactive returns false if running under the SystemVar service manager
-	// and true otherwise.
 	Interactive() bool
-
-	// New creates a new service for this SystemVar.
 	New(i Controller, c *Config) (Service, error)
 }
 type Controller interface {
@@ -70,21 +58,13 @@ type Service interface {
 	SystemLogger(errs chan<- error) (Logger, error)
 	String() string
 	Platform() string
-	Status() (Status, error)
-}
-type Logger interface {
-	Error(v ...interface{}) error
-	Warning(v ...interface{}) error
-	Info(v ...interface{}) error
-
-	Errorf(format string, a ...interface{}) error
-	Warningf(format string, a ...interface{}) error
-	Infof(format string, a ...interface{}) error
+	Status() (byte, error)
+	//Configure(config *Config) error // Novo método Configure
 }
 
 // New creates a new service based on a service interface and configuration.
 func New(i Controller, c *Config) (Service, error) {
-	if len(c.Name) == 0 {
+	if len(c.GetName()) == 0 {
 		return nil, ErrNameFieldRequired
 	}
 	if SystemVar == nil {
@@ -92,6 +72,7 @@ func New(i Controller, c *Config) (Service, error) {
 	}
 	return SystemVar.New(i, c)
 }
+
 func (kv KeyValue) Bool(name string, defaultValue bool) bool {
 	if v, found := kv[name]; found {
 		if castValue, is := v.(bool); is {
@@ -184,7 +165,7 @@ func Control(s Service, action string) error {
 		err = fmt.Errorf("Unknown action %s", action)
 	}
 	if err != nil {
-		return fmt.Errorf("Failed to %s %v: %v", action, s, err)
+		return fmt.Errorf("failed to %s %v: %v", action, s, err)
 	}
 	return nil
 }
